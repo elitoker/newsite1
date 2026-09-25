@@ -61,8 +61,9 @@ export function makeCharacter(seed = Math.random() * 1e9, look = {}) {
   torso.scale.set(1.15, 1, 0.72);
   if (look.suit) {
     // Shirt front, tie and a lapel line on a dark jacket
-    mesh(geo('shirt', () => new THREE.BoxGeometry(0.11, 0.24, 0.01)), mat('#f2f0ea', 0.6), body, 0, 1.36, 0.118);
-    mesh(geo('tie', () => new THREE.BoxGeometry(0.035, 0.22, 0.012)), mat(look.tie || '#1a1c24', 0.5), body, 0, 1.33, 0.126);
+    // A V of white shirt at the collar with a slim tie down the middle
+    mesh(geo('shirt', () => new THREE.ShapeGeometry(new THREE.Shape([new THREE.Vector2(-0.075, 0), new THREE.Vector2(0.075, 0), new THREE.Vector2(0, -0.2)]))), mat('#f2f0ea', 0.6), body, 0, 1.5, 0.121);
+    mesh(geo('tie', () => new THREE.BoxGeometry(0.03, 0.26, 0.012)), mat(look.tie || '#1a1c24', 0.5), body, 0, 1.36, 0.126);
     mesh(geo('earpiece', () => new THREE.SphereGeometry(0.018, 8, 6)), mat('#e8e4dc', 0.4), body, 0.108, 1.66, 0);
   }
   if (coat) {

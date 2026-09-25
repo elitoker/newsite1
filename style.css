@@ -121,3 +121,8 @@ input.warmth { accent-color: #d98b3a; }
 .tabs button { white-space: nowrap; }
 .sub { font-family: var(--serif); font-weight: 400; font-size: 22px; margin: 28px 0 4px; }
 .grid .span { grid-column: 1 / -1; margin: 10px 0 -4px; }
+
+/* What a guard says when you walk up */
+#bubble { position: fixed; transform: translate(-50%, -100%); max-width: min(300px, 80vw); background: var(--paper); color: var(--ink); font-family: var(--serif); font-size: 19px; line-height: 1.25; padding: 12px 16px; border-radius: 14px; box-shadow: 0 6px 24px rgba(0,0,0,.25); pointer-events: none; opacity: 0; transition: opacity .25s; z-index: 5; }
+#bubble::after { content: ""; position: absolute; left: 50%; bottom: -8px; margin-left: -8px; border: 8px solid transparent; border-bottom: 0; border-top-color: var(--paper); }
+#bubble.show { opacity: 1; }

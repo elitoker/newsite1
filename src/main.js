@@ -5,7 +5,7 @@ import { building, buildBuilding, setWallColor, buildTitle } from './world/build
 import { buildLighting, applyLighting, updateLighting, syncSpots } from './world/lighting.js';
 import { buildOutside, applyOutsideNight } from './world/outside.js';
 import { syncFurniture, refitFurniture } from './world/furniture.js';
-import { buildGuards, updateGuards } from './actors/guards.js';
+import { buildGuards, updateGuards, updateGuardTalk } from './actors/guards.js';
 import { startAudio, applyVolume, restartMusic } from './audio.js';
 import { applyTime, env, followCamera, setShadowBounds } from './world/sky.js';
 import { syncWorks, refitWorks, applyNight as worksAtNight, labelCache } from './art/works.js';
@@ -156,6 +156,7 @@ renderer.setAnimationLoop(now => {
   followCamera(camera);
   updatePatrons(dt, rig.player);
   updateGuards(dt);
+  updateGuardTalk(rig.player, camera, rig.mode !== 'drone' && !introOpen());
   updateAim();
   updateLighting(dt);
 
