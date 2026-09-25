@@ -132,6 +132,7 @@ export function initUI() {
 
   $('menuBtn').addEventListener('click', () => emit('open-panel'));
   $('closePanel').addEventListener('click', () => emit('close-panel'));
+  $('planBtn').addEventListener('click', () => emit('open-planner'));
   $('modes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) emit('mode', b.dataset.k); });
   $('tourBtn').addEventListener('click', () => emit('tour'));
 

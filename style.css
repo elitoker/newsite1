@@ -203,3 +203,18 @@ input.warmth { accent-color: #d98b3a; }
 #review .score { font-family: var(--sans); font-size: 13px; color: var(--graphite); }
 #review .unlock { font-family: var(--sans); font-size: 15px; font-weight: 600; color: #2c6e3f; }
 #review .row { font-family: var(--sans); }
+
+/* 2D editor */
+#planner { position: fixed; inset: 0; z-index: 12; background: var(--paper); display: flex; flex-direction: column; padding: calc(var(--top) + 14px) 18px calc(var(--bottom) + 14px); }
+#planner header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+#planner header h2 { font-family: var(--serif); font-weight: 400; font-size: 32px; margin: 0; }
+#planner header .hint { flex: 1; min-width: 240px; margin: 0; }
+#planner .panes { flex: 1; display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; min-height: 0; }
+#planCanvas { width: 100%; height: 100%; background: #fff; border: 1px solid var(--hair); border-radius: 8px; cursor: default; touch-action: none; }
+#planner .wall { display: flex; flex-direction: column; min-height: 0; gap: 8px; }
+#planner .wall-head, #planner .wall-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+#elevCanvas { flex: 1; min-height: 160px; width: 100%; background: #fff; border: 1px solid var(--hair); border-radius: 8px; touch-action: none; }
+#planner .lbl { font-size: 13px; color: var(--graphite); }
+#planStorage { display: flex; gap: 8px; overflow-x: auto; min-height: 76px; padding-bottom: 4px; }
+#planStorage img { height: 70px; border-radius: 3px; cursor: grab; box-shadow: 0 1px 4px rgba(0,0,0,.2); user-select: none; touch-action: none; }
+@media (max-width: 760px) { #planner .panes { grid-template-columns: 1fr; grid-template-rows: 1fr 1.2fr; } }

@@ -17,6 +17,7 @@ import { cur, updateAim, setHeld, cancelHeld, hang, doAction, holdFromStorage, r
 import { initUI, toast, openPanel, closePanel, panelOpen, updateHud, setModeButtons, setTimeLabel, renderStorage, renderControls } from './ui/panel.js';
 import { initMenu, updateModes, menuOpen } from './game/modes.js';
 import { fillShow } from './game/show.js';
+import { openPlanner, closePlanner, plannerOpen } from './ui/planner.js';
 
 const introOpen = menuOpen;
 
@@ -84,6 +85,8 @@ on('guards', () => buildGuards());
 on('music', applyVolume);
 on('music-style', restartMusic);
 on('furnish', type => { closePanel(); startFurniture(type); });
+on('open-planner', () => { closePanel(); openPlanner(); });
+on('close-planner', closePlanner);
 on('furniture-changed', () => syncFurniture());
 on('random-show', async () => {
   toast('Picking a theme and finding the works…');
@@ -125,7 +128,8 @@ onInput('key', code => {
     case 'Digit2': changeMode('third'); break;
     case 'Digit3': changeMode('drone'); break;
     case 'KeyT': toggleTour(); break;
-    case 'Tab': case 'Escape': if (panelOpen()) closePanel(); else openPanel(); break;
+    case 'KeyP': if (plannerOpen()) closePlanner(); else { closePanel(); openPlanner(); } break;
+    case 'Tab': case 'Escape': if (plannerOpen()) closePlanner(); else if (panelOpen()) closePanel(); else openPanel(); break;
   }
 });
 
@@ -177,5 +181,5 @@ renderer.setAnimationLoop(now => {
     : roomAt(L, rig.player.x, rig.player.z, 0.3)?.name;
   if (where !== lastRoom) { lastRoom = where; updateHud(where || ''); }
 
-  render();
+  if (!plannerOpen()) render();
 });

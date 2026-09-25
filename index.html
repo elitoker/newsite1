@@ -45,6 +45,24 @@
   <button class="primary" id="openDoors">Open the doors</button>
 </div>
 
+<div id="planner" hidden>
+  <header>
+    <h2>Floor plan</h2>
+    <p class="hint">Click a wall to see it straight on. Drag furniture, sculpture and floating walls to move them; scroll over a piece to turn it. Double-click the floor to go there.</p>
+    <button class="quiet" id="closePlanner">Back to the museum</button>
+  </header>
+  <div class="panes">
+    <canvas id="planCanvas"></canvas>
+    <div class="wall">
+      <div class="wall-head"><b id="wallName"></b><span><button class="quiet" id="spaceEvenly">Space evenly</button> <button class="quiet warn" id="clearWall">Take all down</button></span></div>
+      <canvas id="elevCanvas"></canvas>
+      <div class="wall-foot"><span id="wallSel" class="hint"></span><button class="quiet warn" id="takeDownSel" hidden>Take down</button></div>
+      <div class="lbl">In storage. Drag one onto the wall.</div>
+      <div id="planStorage"></div>
+    </div>
+  </div>
+</div>
+
 <div id="review" hidden>
   <div class="card">
     <div id="reviewBody"></div>
@@ -124,7 +142,7 @@
 <aside id="panel" aria-label="Curator's drawer">
   <div class="panel-head">
     <h2>Curate</h2>
-    <div class="row" style="margin:0;gap:6px"><button class="quiet" id="menuHome">Main menu</button><button class="quiet" id="closePanel">Back to the galleries</button></div>
+    <div class="row" style="margin:0;gap:6px"><button class="quiet" id="planBtn">Floor plan</button><button class="quiet" id="menuHome">Main menu</button><button class="quiet" id="closePanel">Back to the galleries</button></div>
   </div>
   <div class="tabs" role="tablist">
     <button role="tab" data-tab="collection" aria-selected="true">Art</button>
