@@ -9,6 +9,8 @@ export function normalize(s = {}) {
   const out = { ...d, ...s, room: { ...d.room, ...(s.room || {}) }, lighting: { ...d.lighting, ...(s.lighting || {}) } };
   if (!Array.isArray(out.lighting.spots)) out.lighting.spots = [];
   if (!Array.isArray(out.furniture)) out.furniture = [];
+  if (!Array.isArray(out.partitions)) out.partitions = [];
+  out.music = { ...d.music, ...(s.music || {}) };
   out.works = Array.isArray(out.works) ? out.works.filter(w => w && w.src && w.faceId) : [];
   out.storage = Array.isArray(out.storage) ? out.storage.filter(w => w && w.src) : [];
   return out;

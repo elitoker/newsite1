@@ -49,7 +49,7 @@ export function buildBuilding() {
   group.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   group.clear();
 
-  const L = generateLayout({ layout: state.layout, ...state.room, windows: state.windows }, { wallT: WALL_T, doorW: DOOR_W, doorH: DOOR_H });
+  const L = generateLayout({ layout: state.layout, ...state.room, windows: state.windows, skylight: state.skylight, partitions: state.partitions }, { wallT: WALL_T, doorW: DOOR_W, doorH: DOOR_H });
   building.layout = L;
   building.colliders = L.colliders;
   building.faces = new Map(Object.values(L.faces).map(f => [f.id, {
@@ -104,6 +104,13 @@ export function buildBuilding() {
       box(sw + th * 2, hh, th, wellMat, cx, y, s.z1 + th / 2);
       box(th, hh, sd, wellMat, s.x0 - th / 2, y, cz);
       box(th, hh, sd, wellMat, s.x1 + th / 2, y, cz);
+      if (s.giant) {
+        // A steel grid both ways, deeper beams every third bar
+        const nx = Math.max(1, Math.round(sw / 1.2)), nz = Math.max(1, Math.round(sd / 1.2));
+        for (let i = 1; i < nx; i++) box(0.06, i % 3 ? 0.08 : 0.3, sd, mullionMat, s.x0 + (sw / nx) * i, L.h + hh - (i % 3 ? 0.05 : 0.15), cz);
+        for (let j = 1; j < nz; j++) box(sw, j % 3 ? 0.08 : 0.3, 0.06, mullionMat, cx, L.h + hh - (j % 3 ? 0.05 : 0.15), s.z0 + (sd / nz) * j);
+        continue;
+      }
       const long = Math.max(sw, sd), n = Math.floor(long / 0.9);
       for (let i = 1; i < n; i++) {
         const k = -long / 2 + (long / n) * i;
@@ -132,6 +139,11 @@ export function buildBuilding() {
     group.add(m);
     m.userData.seg = s;
     building.wallMeshes.push(m);
+  }
+
+  // Floating walls sit on a recessed dark plinth, which reads as a shadow gap
+  for (const s of L.segments.filter(x => x.partition)) {
+    box(s.x1 - s.x0 - 0.12, s.y0, s.z1 - s.z0 - 0.12, trimMat, (s.x0 + s.x1) / 2, s.y0 / 2, (s.z0 + s.z1) / 2);
   }
 
   // Glass in the clerestory windows and the entrance wall, with slim frames

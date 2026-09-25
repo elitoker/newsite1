@@ -81,6 +81,7 @@ export function updateAim() {
     const hit = raycaster.intersectObjects([...building.wallMeshes, ...workHitTargets(), ...furnitureHitTargets()], false)[0];
     if (hit && hit.object.userData.workId && hit.distance < 10) next = { type: 'work', id: hit.object.userData.workId };
     else if (hit && hit.object.userData.furnitureId && hit.distance < 10) next = { type: 'furniture', id: hit.object.userData.furnitureId };
+    else if (hit && hit.object.userData.seg?.partition && hit.distance < 12) next = { type: 'partition', id: hit.object.userData.seg.partition };
   }
   const key = a => (a ? `${a.type}|${a.id}|${a.ok}` : '');
   const changed = key(next) !== key(cur.aim);
@@ -173,6 +174,11 @@ export function renderActions() {
     if (w) items.push({ note: `${w.artist || 'Unknown artist'}, ${w.title}` });
     items.push({ act: 'pickup', key: 'E', label: 'Move' });
     items.push({ act: 'remove', key: 'X', label: 'Take down', warn: true });
+  } else if (aim?.type === 'partition') {
+    items.push({ note: 'Floating wall' });
+    items.push({ act: 'pickup', key: 'E', label: 'Move' });
+    items.push({ act: 'rotate', key: 'R', label: 'Turn' });
+    items.push({ act: 'remove', key: 'X', label: 'Remove', warn: true });
   } else if (aim?.type === 'furniture') {
     const f = state.furniture.find(x => x.id === aim.id);
     if (f) items.push({ note: FURNITURE[f.type].label });
@@ -189,6 +195,14 @@ export function doAction(act) {
   const { aim } = cur;
   if (cur.placing === 'spot') { if (act === 'place') placeSpot(); else if (act === 'cancel') stopPlacing(); return; }
   if (cur.placing === 'furniture') { if (act === 'place') placeFurniture(); else if (act === 'cancel') cancelFurniture(); else if (act === 'rotate') rotateFurniture(); return; }
+  if (aim?.type === 'partition') {
+    const p = state.partitions.find(x => x.id === aim.id);
+    if (!p) return;
+    if (act === 'pickup') startFurniture('wall', { id: p.id, rot: p.alongZ ? Math.PI / 2 : 0, partition: true });
+    else if (act === 'rotate') rotateFurniture();
+    else if (act === 'remove') { state.partitions = state.partitions.filter(x => x.id !== p.id); save(); emit('rebuild'); }
+    return;
+  }
   if (aim?.type === 'furniture') {
     if (act === 'pickup') pickUpFurniture(aim.id);
     else if (act === 'remove') removeFurniture(aim.id);
@@ -285,7 +299,18 @@ function dropGhost() {
 export function placeFurniture() {
   const f = cur.furn, a = f?.aim;
   if (!a) return;
-  if (!a.ok) { emit('toast', 'That spot is blocked by a wall or another piece. Try somewhere else.'); return; }
+  if (!a.ok) { emit('toast', 'That spot is blocked by a wall, a doorway or another piece. Try somewhere else.'); return; }
+  if (FURNITURE[f.type].partition) {
+    const alongZ = Math.round(f.rot / (Math.PI / 2)) % 2 === 1;
+    const existing = f.origin && state.partitions.find(p => p.id === f.origin.id);
+    if (existing) Object.assign(existing, { x: a.x, z: a.z, alongZ });
+    else state.partitions.push({ id: 'p' + newId().slice(0, 8), x: a.x, z: a.z, len: FURNITURE[f.type].w, alongZ });
+    dropGhost();
+    save();
+    emit('rebuild');
+    renderActions();
+    return;
+  }
   state.furniture.push({ id: f.origin?.id || newId(), type: f.type, x: a.x, z: a.z, rot: f.rot });
   dropGhost();
   syncFurniture();
@@ -296,7 +321,7 @@ export function placeFurniture() {
 export function cancelFurniture() {
   const f = cur.furn;
   if (!f) return;
-  if (f.origin) state.furniture.push(f.origin);
+  if (f.origin && !f.origin.partition) state.furniture.push(f.origin);
   dropGhost();
   syncFurniture();
   save();
@@ -304,7 +329,17 @@ export function cancelFurniture() {
 }
 
 export function rotateFurniture(step = Math.PI / 4) {
-  if (cur.furn) { cur.furn.rot = (cur.furn.rot + step) % (Math.PI * 2); return; }
+  if (cur.furn) { cur.furn.rot = (cur.furn.rot + (FURNITURE[cur.furn.type].partition ? Math.PI / 2 : step)) % (Math.PI * 2); return; }
+  if (cur.aim?.type === 'partition') {
+    const p = state.partitions.find(x => x.id === cur.aim.id);
+    if (!p) return;
+    const turned = { type: 'wall', x: p.x, z: p.z, rot: p.alongZ ? 0 : Math.PI / 2 };
+    if (!fits(turned, p.id)) { emit('toast', 'No room to turn the wall here.'); return; }
+    p.alongZ = !p.alongZ;
+    save();
+    emit('rebuild');
+    return;
+  }
   const f = cur.aim?.type === 'furniture' && state.furniture.find(x => x.id === cur.aim.id);
   if (!f) return;
   const turned = { ...f, rot: (f.rot + step) % (Math.PI * 2) };

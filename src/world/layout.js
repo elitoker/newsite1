@@ -177,6 +177,29 @@ export function generateLayout(params, opts = {}) {
     if (door) seg(p.o, p.c, door.a, door.b, DH, h, { pos: null, neg: null }, true);
   }
 
+  // Free-standing walls the curator places. They float on a shadow gap, stop short
+  // of the ceiling, and take their face ids from the wall's own id so hung works
+  // stay with the wall when it moves.
+  const wallH = Math.min(h - 0.9, 3.6), gap = 0.15;
+  for (const pw of params.partitions || []) {
+    const room = rooms.find(r => pw.x > r.x0 && pw.x < r.x1 && pw.z > r.z0 && pw.z < r.z1);
+    if (!room) continue;
+    const o = pw.alongZ ? 'v' : 'h';
+    const c = o === 'h' ? pw.z : pw.x, m = o === 'h' ? pw.x : pw.z;
+    const a = m - pw.len / 2, b = m + pw.len / 2;
+    const face = (side, suffix) => {
+      const nx = o === 'v' ? side : 0, nz = o === 'h' ? side : 0, id = `${pw.id}-${suffix}`;
+      faces[id] = {
+        id, room: room.id, edge: suffix, partition: pw.id,
+        cx: o === 'h' ? m : c + side * T / 2, cz: o === 'h' ? c + side * T / 2 : m,
+        nx, nz, rx: nz, rz: -nx, len: b - a, maxY: gap + wallH,
+      };
+      return id;
+    };
+    seg(o, c, a, b, gap, gap + wallH, { pos: face(1, 'A'), neg: face(-1, 'B') });
+    segments[segments.length - 1].partition = pw.id;
+  }
+
   // 4. Furniture and skylights
   const benches = [], skylights = [];
   for (const r of rooms) {
@@ -191,6 +214,14 @@ export function generateLayout(params, opts = {}) {
         benches.push({ ...b, room: r.id, alongZ });
       }
     }
+    const kind = params.skylight || 'strips';
+    if (kind === 'none') continue;
+    if (kind === 'giant') {
+      // One glass roof over nearly the whole room, on a steel grid
+      const m = Math.min(1.6, S * 0.15);
+      skylights.push({ room: r.id, x0: r.x0 + m, x1: r.x1 - m, z0: r.z0 + m, z1: r.z1 - m, alongZ, giant: true });
+      continue;
+    }
     const count = Math.max(1, Math.round(L / 8));
     const across = Math.min(S * 0.4, 4), alongLen = Math.min(3.6, (L / count) * 0.55);
     for (let i = 0; i < count; i++) {
@@ -202,7 +233,7 @@ export function generateLayout(params, opts = {}) {
   }
 
   const colliders = [
-    ...segments.filter(s => !s.lintel && !s.upper).map(({ x0, x1, z0, z1 }) => ({ x0, x1, z0, z1 })),
+    ...segments.filter(s => !s.lintel && !s.upper).map(({ x0, x1, z0, z1, partition }) => ({ x0, x1, z0, z1, partition })),
     ...benches.map(b => ({ x0: b.x - b.hx, x1: b.x + b.hx, z0: b.z - b.hz, z1: b.z + b.hz })),
   ];
   const bounds = {

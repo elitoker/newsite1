@@ -59,6 +59,7 @@
     <button role="tab" data-tab="room" aria-selected="false">Building</button>
     <button role="tab" data-tab="light" aria-selected="false">Light</button>
     <button role="tab" data-tab="furnish" aria-selected="false">Furnish</button>
+    <button role="tab" data-tab="sculpture" aria-selected="false">Sculpture</button>
     <button role="tab" data-tab="show" aria-selected="false">Show</button>
   </div>
 
@@ -88,6 +89,7 @@
     <div class="field"><span class="lbl">Walls</span><div class="swatches" id="wallSwatches"></div></div>
     <div class="field"><span class="lbl">Floor</span><div class="seg" id="floorSeg"></div></div>
     <div class="field"><span class="lbl">Frames</span><div class="seg" id="frameSeg"></div></div>
+    <div class="field"><span class="lbl">Skylights</span><div class="seg" id="skylightSeg"></div></div>
     <div class="field"><span class="lbl">Outside</span><div class="seg" id="backdropSeg"></div></div>
     <label class="check"><input type="checkbox" id="windowsC"> High windows on outside walls</label>
     <label class="check"><input type="checkbox" id="labelsC"> Wall labels next to each work</label>
@@ -109,6 +111,14 @@
   <section class="tab" id="tab-furnish">
     <p class="hint">Pick a piece, aim at the floor and click to place it. R turns it. Aim at a placed piece to move, turn or remove it.</p>
     <div id="furnishGrid" class="grid"></div>
+    <h3 class="sub">Architecture</h3>
+    <p class="hint">A floating wall gives you two more walls to hang on. A reflecting pool mirrors the room.</p>
+    <div id="archGrid" class="grid"></div>
+  </section>
+
+  <section class="tab" id="tab-sculpture">
+    <p class="hint">Place a sculpture the same way as furniture. R turns it.</p>
+    <div id="sculptureGrid" class="grid"></div>
   </section>
 
   <section class="tab" id="tab-show">

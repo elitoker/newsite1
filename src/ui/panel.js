@@ -4,6 +4,7 @@ import { searchCollection } from '../art/collection.js';
 import { workSize } from '../art/works.js';
 import { FIXTURES, MAX_SPOTS } from '../world/lighting.js';
 import { BACKDROPS } from '../world/outside.js';
+const SKYLIGHTS = { strips: 'Strips', giant: 'One giant', none: 'None' };
 import { FURNITURE, furnitureThumbs } from '../world/furniture.js';
 
 const $ = id => document.getElementById(id);
@@ -54,6 +55,7 @@ export function renderControls() {
   for (const k of ['w', 'd', 'h']) { $(k + 'R').value = state.room[k]; $(k + 'Val').textContent = state.room[k] + ' m'; }
   $('labelsC').checked = state.labels;
   seg($('backdropSeg'), BACKDROPS, state.backdrop);
+  seg($('skylightSeg'), SKYLIGHTS, state.skylight);
   $('windowsC').checked = state.windows;
   const lt = state.lighting;
   $('brightR').value = lt.brightness;
@@ -89,12 +91,15 @@ function renderFurnish() {
   if (furnishDrawn) return;
   furnishDrawn = true;
   const t = furnitureThumbs();
-  $('furnishGrid').innerHTML = Object.entries(FURNITURE).map(([k, f]) => `
+  const cards = cat => Object.entries(FURNITURE).filter(([, f]) => (f.cat || 'furniture') === cat).map(([k, f]) => `
     <button class="work" data-type="${k}">
       <div class="thumb"><img src="${t[k]}" alt=""></div>
       <div class="t">${esc(f.label)}</div>
       <div class="a">${f.w} × ${f.d} m</div>
     </button>`).join('');
+  $('furnishGrid').innerHTML = cards('furniture');
+  $('archGrid').innerHTML = cards('arch');
+  $('sculptureGrid').innerHTML = cards('sculpture');
 }
 
 export function setTimeLabel(name) { $('timeVal').textContent = name; }
@@ -128,7 +133,7 @@ export function initUI() {
     document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
     if (b.dataset.tab === 'show') renderStorage();
-    if (b.dataset.tab === 'furnish') renderFurnish();
+    if (b.dataset.tab === 'furnish' || b.dataset.tab === 'sculpture') renderFurnish();
   }));
 
   /* Collection */
@@ -218,6 +223,7 @@ export function initUI() {
   segHandler('frameSeg', 'frame', 'frames');
   segHandler('qualitySeg', 'quality', 'quality');
   segHandler('backdropSeg', 'backdrop', 'backdrop');
+  segHandler('skylightSeg', 'skylight', 'rebuild');
   $('windowsC').addEventListener('change', e => { state.windows = e.target.checked; save(); emit('rebuild'); });
   $('timeR').addEventListener('input', e => { state.time = +e.target.value; save(); emit('time'); });
   let rebuildTimer;
@@ -232,7 +238,7 @@ export function initUI() {
   $('labelsC').addEventListener('change', e => { state.labels = e.target.checked; save(); emit('frames'); });
 
   /* Furnish */
-  $('furnishGrid').addEventListener('click', e => { const b = e.target.closest('[data-type]'); if (b) emit('furnish', b.dataset.type); });
+  for (const id of ['furnishGrid', 'archGrid', 'sculptureGrid']) $(id).addEventListener('click', e => { const b = e.target.closest('[data-type]'); if (b) emit('furnish', b.dataset.type); });
   $('guardsC').addEventListener('change', e => { state.guards = e.target.checked; save(); emit('guards'); });
 
   /* Light */

@@ -3,6 +3,7 @@ import { scene } from '../engine.js';
 import { state } from '../state.js';
 import { building } from './building.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { Reflector } from 'three/addons/objects/Reflector.js';
 import { roomAt } from '../actors/nav.js';
 
 // Furniture the curator places: benches, sofas, plants, rugs, plinths and more.
@@ -22,6 +23,7 @@ const concrete = () => mat('concrete', { color: 0x9c9993, roughness: 0.95 });
 const soil = () => mat('soil', { color: 0x2e2419, roughness: 1 });
 const leaf = () => mat('leaf', { color: 0x3f6b35, roughness: 0.8, side: THREE.DoubleSide });
 const palm = () => mat('palm', { color: 0x4f7a3a, roughness: 0.8, side: THREE.DoubleSide });
+const marble = () => mat('marble', { color: 0xeeebe4, roughness: 0.35 });
 const bronze = () => mat('bronze', { color: 0x8a5a2b, roughness: 0.3, metalness: 0.9 });
 const brass = () => mat('brass', { color: 0xb08d57, roughness: 0.3, metalness: 0.9 });
 const rope = () => mat('rope', { color: 0x7a1f24, roughness: 0.7 });
@@ -187,6 +189,121 @@ export const FURNITURE = {
       cover.forEach((c, i) => part(g, B(0.28, 0.02 + i * 0.005, 0.22), mat('cat' + i, { color: c, roughness: 0.6 }), -0.25 + i * 0.05, 0.45 + i * 0.022, -0.02 + i * 0.03, 0, i * 0.3, 0));
     },
   },
+
+  /* Sculpture */
+  bust: {
+    label: 'Marble bust', cat: 'sculpture', w: 0.6, d: 0.6,
+    build(g) {
+      part(g, B(0.5, 1.15, 0.5), white(), 0, 0.575, 0);
+      part(g, C(0.12, 0.15, 0.1, 20), marble(), 0, 1.2, 0);
+      const chest = part(g, new THREE.SphereGeometry(0.2, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2), marble(), 0, 1.25, 0);
+      chest.scale.set(1.2, 0.9, 0.7);
+      part(g, C(0.05, 0.06, 0.12, 12), marble(), 0, 1.47, 0);
+      const head = part(g, new THREE.SphereGeometry(0.11, 24, 18), marble(), 0, 1.62, 0.01);
+      head.scale.set(0.9, 1.15, 1);
+      part(g, new THREE.SphereGeometry(0.115, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), marble(), 0, 1.66, -0.01).scale.set(0.95, 1, 1.02);
+    },
+  },
+  figure: {
+    label: 'Standing figure', cat: 'sculpture', w: 0.8, d: 0.8,
+    build(g) {
+      part(g, B(0.75, 0.4, 0.75), white(), 0, 0.2, 0);
+      const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 6, 14);
+      part(g, cap(0.07, 0.75), marble(), -0.09, 0.85, 0, 0, 0, 0.06);
+      part(g, cap(0.07, 0.75), marble(), 0.1, 0.87, 0.04, -0.12, 0, -0.03);
+      part(g, cap(0.17, 0.4), marble(), 0, 1.55, 0, 0, 0, 0.05).scale.set(1.1, 1, 0.7);
+      part(g, cap(0.045, 0.55), marble(), -0.25, 1.5, 0, 0, 0, 0.15);
+      part(g, cap(0.045, 0.55), marble(), 0.25, 1.62, 0.08, -0.9, 0, -0.3);
+      part(g, new THREE.SphereGeometry(0.1, 20, 16), marble(), 0.02, 2.05, 0.01);
+    },
+  },
+  reclining: {
+    label: 'Reclining form', cat: 'sculpture', w: 2.2, d: 1,
+    build(g) {
+      part(g, B(2.2, 0.35, 1), concrete(), 0, 0.175, 0);
+      part(g, new THREE.TorusGeometry(0.42, 0.2, 20, 40, Math.PI * 1.3), bronze(), -0.4, 0.75, 0, 0, 0, 0.2);
+      part(g, new THREE.SphereGeometry(0.32, 24, 18), bronze(), 0.55, 0.6, 0).scale.set(1.5, 0.75, 0.9);
+      part(g, new THREE.SphereGeometry(0.16, 20, 14), bronze(), -0.85, 1.15, 0).scale.set(1, 1.2, 0.9);
+    },
+  },
+  column: {
+    label: 'Endless column', cat: 'sculpture', w: 0.6, d: 0.6,
+    build(g) {
+      const bead = new THREE.OctahedronGeometry(0.28, 0);
+      bead.scale(1, 1.4, 1);
+      for (let i = 0; i < 6; i++) part(g, bead, bronze(), 0, 0.2 + i * 0.56 + 0.28, 0, 0, Math.PI / 4, 0);
+      part(g, B(0.3, 0.2, 0.3), bronze(), 0, 0.1, 0);
+    },
+  },
+  balloonDog: {
+    label: 'Balloon dog', cat: 'sculpture', w: 1.4, d: 0.6,
+    build(g) {
+      const m = mat('balloon', { color: 0xd4247a, roughness: 0.08, metalness: 1 });
+      const cap = (r, l) => new THREE.CapsuleGeometry(r, l, 8, 18);
+      part(g, cap(0.15, 0.55), m, 0, 0.85, 0, 0, 0, Math.PI / 2);
+      for (const [x, z] of [[-0.3, -0.13], [-0.3, 0.13], [0.3, -0.13], [0.3, 0.13]]) part(g, cap(0.11, 0.45), m, x, 0.38, z, z * 1.2, 0, x * 0.3);
+      part(g, cap(0.13, 0.28), m, 0.42, 1.1, 0, 0, 0, -0.4);
+      part(g, cap(0.11, 0.25), m, 0.62, 1.3, 0, 0, 0, Math.PI / 2 - 0.2);
+      for (const z of [-0.08, 0.08]) part(g, cap(0.06, 0.18), m, 0.5, 1.45, z, z * 2, 0, 0.3);
+      part(g, cap(0.07, 0.2), m, -0.42, 1.0, 0, 0, 0, 0.6);
+    },
+  },
+  stabile: {
+    label: 'Steel stabile', cat: 'sculpture', w: 1.8, d: 1.2,
+    build(g) {
+      const black = mat('stabileBlack', { color: 0x151515, roughness: 0.5, metalness: 0.4 });
+      const red = mat('stabileRed', { color: 0xc4261d, roughness: 0.5 });
+      const yellow = mat('stabileYellow', { color: 0xe8b21e, roughness: 0.5 });
+      part(g, new THREE.TorusGeometry(0.9, 0.03, 8, 40, Math.PI), black, 0, 0, 0);
+      part(g, C(0.02, 0.02, 1.9, 8), black, 0, 1.35, 0, 0, 0, 0.35);
+      part(g, C(0.015, 0.015, 1.2, 8), black, 0.5, 2.15, 0, 0, 0, 1.2);
+      part(g, C(0.28, 0.28, 0.02, 30), red, -0.35, 2.3, 0, Math.PI / 2, 0.2, 0);
+      part(g, C(0.2, 0.2, 0.02, 30), yellow, 1.05, 2.0, 0, Math.PI / 2, -0.3, 0);
+      part(g, C(0.16, 0.16, 0.02, 30), black, 0.7, 2.55, 0, Math.PI / 2, 0.5, 0);
+    },
+  },
+  cairn: {
+    label: 'Stacked stones', cat: 'sculpture', w: 0.7, d: 0.7,
+    build(g) {
+      const stone = mat('stone', { color: 0x6d6a64, roughness: 0.9, flatShading: true });
+      let y = 0;
+      [0.34, 0.3, 0.26, 0.22, 0.18, 0.14].forEach((r, i) => {
+        const s = part(g, new THREE.IcosahedronGeometry(r, 1), stone, (i % 2 ? 0.03 : -0.02), y + r * 0.55, 0, 0, i, 0);
+        s.scale.set(1, 0.55, 0.9);
+        y += r * 1.05;
+      });
+    },
+  },
+  bean: {
+    label: 'Mirror bean', cat: 'sculpture', w: 2.6, d: 1.6,
+    build(g) {
+      const m = mat('mirror', { color: 0xffffff, roughness: 0.04, metalness: 1 });
+      m.userData.envScale = 2.5;
+      const b = part(g, new THREE.SphereGeometry(1, 48, 32), m, 0, 0.72, 0);
+      b.scale.set(1.3, 0.72, 0.8);
+    },
+  },
+
+  /* Architecture */
+  pool: {
+    label: 'Reflecting pool', cat: 'arch', w: 5, d: 2.4,
+    build(g) {
+      const rim = mat('poolRim', { color: 0x8f8a80, roughness: 0.7 });
+      part(g, B(5, 0.18, 0.2), rim, 0, 0.09, -1.1);
+      part(g, B(5, 0.18, 0.2), rim, 0, 0.09, 1.1);
+      part(g, B(0.2, 0.18, 2), rim, -2.4, 0.09, 0);
+      part(g, B(0.2, 0.18, 2), rim, 2.4, 0.09, 0);
+      const water = mat('water', { color: 0x0e1a1f, roughness: 0.02, metalness: 0.3 });
+      water.userData.envScale = 3;
+      part(g, B(4.6, 0.02, 2), water, 0, 0.13, 0).castShadow = false;
+    },
+  },
+  wall: {
+    label: 'Floating wall', cat: 'arch', w: 4, d: 0.3, partition: true,
+    build(g) {
+      part(g, B(4, 3.4, 0.3), mat('ghostWall', { color: 0xf1efea, roughness: 0.9 }), 0, 0.15 + 1.7, 0);
+    },
+  },
 };
 
 /* ---------------------------------------------------------------- scene objects */
@@ -227,19 +344,26 @@ export function fits(f, ignoreId = null) {
   const corners = [[box.x0 + inset, box.z0 + inset], [box.x1 - inset, box.z0 + inset], [box.x0 + inset, box.z1 - inset], [box.x1 - inset, box.z1 - inset]];
   if (!corners.every(([x, z]) => roomAt(L, x, z))) return false;
   const hit = b => box.x0 < b.x1 && box.x1 > b.x0 && box.z0 < b.z1 && box.z1 > b.z0;
-  if (L.colliders.some(hit)) return false;
+  if (L.colliders.some(b => !(ignoreId && b.partition === ignoreId) && hit(b))) return false;
   if (FURNITURE[f.type].flat) return true;
+  // Keep doorways clear
+  const doorZone = d => d.o === 'h'
+    ? { x0: d.x - d.width / 2 - 0.3, x1: d.x + d.width / 2 + 0.3, z0: d.z - 1.3, z1: d.z + 1.3 }
+    : { x0: d.x - 1.3, x1: d.x + 1.3, z0: d.z - d.width / 2 - 0.3, z1: d.z + d.width / 2 + 0.3 };
+  if (L.doors.some(d => hit(doorZone(d)))) return false;
   return !state.furniture.some(o => o.id !== ignoreId && !FURNITURE[o.type]?.flat && hit(footprint(o)));
 }
 
 export function syncFurniture() {
-  for (const g of furnitureObjs.values()) { g.traverse(o => o.geometry?.dispose()); group.remove(g); }
+  let reflectors = 0;
+  for (const g of furnitureObjs.values()) { g.traverse(o => { o.geometry?.dispose(); if (o.isReflector) o.dispose(); }); group.remove(g); }
   furnitureObjs.clear();
   for (const f of state.furniture) {
     if (!FURNITURE[f.type]) continue;
     const g = makeFurniture(f.type);
     g.position.set(f.x, 0, f.z);
     g.rotation.y = f.rot;
+    if (f.type === 'pool' && state.quality === 'high' && reflectors++ < 2) addReflection(g);
     g.traverse(o => { if (o.isMesh) o.userData.furnitureId = f.id; });
     group.add(g);
     furnitureObjs.set(f.id, g);
@@ -325,4 +449,14 @@ export function furnitureThumbs(size = 160) {
   r.dispose();
   r.forceContextLoss();
   return thumbs;
+}
+
+// A real mirror on the pool's surface (costs a second render of the scene, so High quality only)
+function addReflection(g) {
+  const r = new Reflector(new THREE.PlaneGeometry(4.6, 2), {
+    textureWidth: 1024, textureHeight: 512, color: 0x6f8189, clipBias: 0.003,
+  });
+  r.rotation.x = -Math.PI / 2;
+  r.position.y = 0.142;
+  g.add(r);
 }

@@ -119,3 +119,4 @@ input[type="range"] { width: 100%; accent-color: var(--ultramarine); }
 .list .item .quiet { padding: 5px 10px; font-size: 13px; }
 input.warmth { accent-color: #d98b3a; }
 .tabs button { white-space: nowrap; }
+.sub { font-family: var(--serif); font-weight: 400; font-size: 22px; margin: 28px 0 4px; }

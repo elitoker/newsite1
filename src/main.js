@@ -67,7 +67,7 @@ on('rebuild', () => rebuildWorld());
 on('wall-color', hex => setWallColor(hex));
 on('title', () => { buildTitle(); updateHud(); });
 on('time', applyTimeAll);
-on('quality', () => { setQuality(state.quality); buildLighting(); });
+on('quality', () => { setQuality(state.quality); buildLighting(); syncFurniture(); });
 on('lighting', () => { applyLighting(); worksAtNight(env.night); });
 on('fixtures', () => buildLighting());
 on('picture-lights', () => { syncWorks(); buildLighting(); worksAtNight(env.night); });

@@ -100,7 +100,7 @@ function buildFixtures(L) {
     const n = Math.max(1, Math.round(long / 10));
     for (let i = 0; i < n; i++) {
       const c = -long / 2 + (long / n) * (i + 0.5);
-      lampSpots.push({ x: alongZ ? r.cx : r.cx + c, y: Math.max(2.6, h * 0.55), z: alongZ ? r.cz + c : r.cz, power: area / n });
+      lampSpots.push({ x: alongZ ? r.cx : r.cx + c, y: Math.max(3.2, h - 1.3), z: alongZ ? r.cz + c : r.cz, power: area / n });
     }
 
     if (style === 'track') {

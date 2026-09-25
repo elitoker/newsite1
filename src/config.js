@@ -66,4 +66,7 @@ export const DEFAULTS = {
   windows: true,
   furniture: [],  // { id, type, x, z, rot }
   guards: true,
+  skylight: 'strips',   // strips | giant | none
+  partitions: [], // floating walls: { id, x, z, len, alongZ }
+  music: { on: true, style: 'ambient', volume: 0.5 },
 };
