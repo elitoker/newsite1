@@ -6,14 +6,15 @@ A museum you curate. Walk it in first person, follow yourself in third person, o
 
 The site uses JavaScript modules, so it needs a local web server (opening index.html directly won't work).
 
-    cd the-raquel
-    python3 -m http.server 8000
+Open PowerShell in this folder and run
 
-Then open http://localhost:8000. In VS Code, the Live Server extension does the same thing.
+    powershell -ExecutionPolicy Bypass -File serve.ps1
+
+Then open http://localhost:8000. If you have Python, `python -m http.server 8000` works too. In VS Code, the Live Server extension does the same thing.
 
 ## Put it online
 
-Upload everything in this folder to a GitHub repo, then Settings → Pages → Deploy from branch → main → / (root).
+Keep index.html at the top level of the repo, not inside a subfolder. Then in GitHub go to Settings → Pages → Deploy from branch → main → / (root).
 
 ## How the code is organized
 
