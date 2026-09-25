@@ -223,8 +223,43 @@ export function buildOutside() {
   if (!B) return;
   seed = 12345;
   ({ park, city, plaza }[state.backdrop] || park)(B);
+  if (state.landmark === 'pyramid') pyramid(B);
 }
 
 export function applyOutsideNight(night) {
   if (towerMat) towerMat.emissiveIntensity = night * 1.4;
+}
+
+// A glass pyramid in the forecourt, for the Louvre look
+function pyramid(B) {
+  const cx = (B.x0 + B.x1) / 2, z = B.z1 + 34, r = 17, h = 21;
+  const glass = mat('pyramidGlass', () => {
+    const m = new THREE.MeshStandardMaterial({ color: 0xbcd3dc, transparent: true, opacity: 0.35, roughness: 0.05, metalness: 0.5, side: THREE.DoubleSide, depthWrite: false });
+    m.userData.envScale = 3;
+    return m;
+  });
+  const geo = new THREE.ConeGeometry(r, h, 4, 1, true);
+  geo.rotateY(Math.PI / 4);
+  geo.translate(cx, h / 2, z);
+  const m = new THREE.Mesh(geo, glass);
+  m.renderOrder = 3;
+  group.add(m);
+  // Steel lattice lines on each face
+  const pts = [];
+  const apex = new THREE.Vector3(cx, h, z);
+  const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => new THREE.Vector3(cx + a * r * Math.SQRT1_2, 0, z + b * r * Math.SQRT1_2));
+  for (let i = 0; i < 4; i++) {
+    const a = corners[i], b = corners[(i + 1) % 4];
+    for (let k = 0; k <= 10; k++) {
+      const p = a.clone().lerp(b, k / 10);
+      pts.push(p, apex);
+      const q = a.clone().lerp(apex, k / 10), s = b.clone().lerp(apex, k / 10);
+      pts.push(q, s);
+    }
+  }
+  const lines = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), mat('lattice', () => new THREE.LineBasicMaterial({ color: 0x3a3f44, transparent: true, opacity: 0.6 })));
+  group.add(lines);
+  // Fountain pools around it
+  const water = mat('fountain', () => { const w = new THREE.MeshStandardMaterial({ color: 0x1d3440, roughness: 0.03, metalness: 0.4 }); w.userData.envScale = 3; return w; });
+  for (const [dx, dz] of [[-1, 0], [1, 0]]) strip(water, cx + dx * (r + 4) - 7, z - 7, cx + dx * (r + 4) + 7, z + 7, 0.03);
 }

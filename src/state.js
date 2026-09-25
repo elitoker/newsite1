@@ -40,11 +40,20 @@ export function replaceState(s) {
   Object.assign(state, normalize(s));
 }
 
+// Where the current game saves: free play, story mode, or nowhere (visits to famous museums)
+let slot = STORE_KEY;
+export const setSlot = k => { slot = k; };
+export const getSlot = () => slot;
+export function readSlot(k) {
+  try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : null; } catch { return null; }
+}
+
 let saveTimer = null;
 export function save() {
   clearTimeout(saveTimer);
+  if (!slot) return;
   saveTimer = setTimeout(() => {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+    try { localStorage.setItem(slot, JSON.stringify(state)); }
     catch { emit('toast', 'The show is too big to save in this browser. Uploaded images take the most space.'); }
   }, 300);
 }

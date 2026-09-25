@@ -319,6 +319,7 @@ export function initUI() {
     const b = e.target.closest('.work');
     if (b) emit('hold-storage', +b.dataset.i);
   });
+  $('randomShow').addEventListener('click', () => { emit('close-panel'); emit('random-show'); });
   $('exportBtn').addEventListener('click', () => {
     const blob = new Blob([JSON.stringify(state)], { type: 'application/json' });
     const a = document.createElement('a');

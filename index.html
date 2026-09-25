@@ -34,25 +34,97 @@
 <div id="riseFall"><button id="rise" aria-label="Fly up">Up</button><button id="fall" aria-label="Fly down">Down</button></div>
 <div id="toast" role="status"></div>
 <div id="bubble" aria-live="polite"></div>
+<div id="criticBubble" class="bubble"></div>
+<div id="criticStatus" hidden></div>
+
+<div id="brief" hidden>
+  <div class="lvl">Commission</div>
+  <h3 id="briefTitle"></h3>
+  <p id="briefText"></p>
+  <ul id="briefGoals"></ul>
+  <button class="primary" id="openDoors">Open the doors</button>
+</div>
+
+<div id="review" hidden>
+  <div class="card">
+    <div id="reviewBody"></div>
+    <div class="row">
+      <button class="primary" id="reviewNext">Next commission</button>
+      <button class="quiet" id="reviewKeep">Keep working on this show</button>
+      <button class="quiet" id="reviewMenu">Main menu</button>
+    </div>
+  </div>
+</div>
 
 <div id="intro">
-  <div class="inner">
+  <div class="intro-bg" aria-hidden="true"></div>
+
+  <section class="screen active" data-screen="home">
     <h1 id="introTitle">Museum Machine</h1>
-    <p>A museum that only hangs what you choose. Search the collection, pick a wall, and put the show together.</p>
+    <p class="lede">Build a museum, hang a show, and walk through it.</p>
+    <nav class="menu">
+      <button data-go="story"><span class="k">New game</span><span class="d">Curate shows for the critics, earn stars, and unlock new galleries.</span></button>
+      <button data-go="free"><span class="k">Free play</span><span class="d">Design your own museum and hang whatever you like.</span></button>
+      <button data-go="famous"><span class="k">Famous museums</span><span class="d">Walk through galleries styled after the Louvre, the Met, the Tate and more.</span></button>
+      <button data-go="live"><span class="k">Live shows</span><span class="d">Search for an exhibition, like an artist at a museum, and walk right in.</span></button>
+    </nav>
+    <button class="link" id="continueBtn" hidden>Continue your museum</button>
     <div class="keys">
       <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> walk, <kbd>Shift</kbd> faster, drag with the mouse to look<br>
-      <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> first person, third person, drone<br>
-      In the drone, <kbd>Space</kbd> and <kbd>C</kbd> fly up and down, <kbd>T</kbd> flies the tour<br>
-      <kbd>Esc</kbd> opens the curator's drawer
+      <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> first person, third person, drone. <kbd>Esc</kbd> opens the curator's drawer. <kbd>M</kbd> mutes music.
     </div>
-    <button class="primary" id="enterBtn">Enter the museum</button>
-  </div>
+  </section>
+
+  <section class="screen" data-screen="free">
+    <button class="back" data-go="home">Back</button>
+    <h2>Your museum</h2>
+    <div class="q"><span class="lbl">What kind of museum is it?</span><div class="choices" id="qKind"></div></div>
+    <div class="q"><span class="lbl">Where does it stand?</span><div class="choices small" id="qWhere"></div></div>
+    <div class="q"><span class="lbl">What's on the walls?</span><div class="choices small" id="qWalls"></div></div>
+    <div class="q"><span class="lbl">When do you arrive?</span><div class="choices small" id="qArrive"></div></div>
+    <div class="row">
+      <button class="primary" id="openFull">Open with a full show</button>
+      <button class="ghost" id="openEmpty">Start with empty walls</button>
+    </div>
+  </section>
+
+  <section class="screen" data-screen="famous">
+    <button class="back" data-go="home">Back</button>
+    <h2>Famous museums</h2>
+    <p class="lede small">Each one is filled with public domain work in the spirit of its collection.</p>
+    <div class="cards" id="famousCards"></div>
+  </section>
+
+  <section class="screen" data-screen="live">
+    <button class="back" data-go="home">Back</button>
+    <h2>Live shows</h2>
+    <p class="lede small">Type an artist, and the museum if you like. The gallery takes on that museum's look and fills with the artist's work.</p>
+    <div class="search-row">
+      <input type="search" id="liveQ" placeholder="Georgia O'Keeffe at the Detroit Institute of Arts" enterkeyhint="go">
+      <button class="primary" id="liveGo">Find it</button>
+    </div>
+    <div class="chips dark" id="liveChips"></div>
+    <div id="liveResult"></div>
+  </section>
+
+  <section class="screen" data-screen="story">
+    <button class="back" data-go="home">Back</button>
+    <h2>New game</h2>
+    <p class="lede small">Each commission comes with a brief. Hang the show, open the doors, and a critic walks through and writes a review. Earn stars to unlock the next gallery.</p>
+    <div class="levels" id="levels"></div>
+  </section>
+
+  <section class="screen" data-screen="loading">
+    <h2 id="loadingTitle">Hanging the show</h2>
+    <p class="lede small" id="loadingText">Finding the works…</p>
+    <div class="bar"><i></i></div>
+  </section>
 </div>
 
 <aside id="panel" aria-label="Curator's drawer">
   <div class="panel-head">
     <h2>Curate</h2>
-    <button class="quiet" id="closePanel">Back to the galleries</button>
+    <div class="row" style="margin:0;gap:6px"><button class="quiet" id="menuHome">Main menu</button><button class="quiet" id="closePanel">Back to the galleries</button></div>
   </div>
   <div class="tabs" role="tablist">
     <button role="tab" data-tab="collection" aria-selected="true">Art</button>
@@ -126,6 +198,7 @@
   <section class="tab" id="tab-show">
     <div class="field"><label for="showTitle">Exhibition title</label><input type="text" id="showTitle"></div>
     <p class="hint" id="showCount"></p>
+    <div class="row" style="margin-top:0"><button class="primary" id="randomShow">Random show</button><span class="hint">Picks a theme and fills every wall. The current show goes to storage.</span></div>
     <div class="field"><label for="patronsR">Visitors <span class="val" id="patronsVal"></span></label><input type="range" id="patronsR" min="0" max="30" step="1"></div>
     <label class="check" style="margin:-6px 0 18px"><input type="checkbox" id="guardsC"> A guard in every room</label>
     <div class="field"><span class="lbl">Graphics</span><div class="seg" id="qualitySeg"></div></div>

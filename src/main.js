@@ -6,7 +6,7 @@ import { buildLighting, applyLighting, updateLighting, syncSpots } from './world
 import { buildOutside, applyOutsideNight } from './world/outside.js';
 import { syncFurniture, refitFurniture } from './world/furniture.js';
 import { buildGuards, updateGuards, updateGuardTalk } from './actors/guards.js';
-import { startAudio, applyVolume, restartMusic } from './audio.js';
+import { applyVolume, restartMusic } from './audio.js';
 import { applyTime, env, followCamera, setShadowBounds } from './world/sky.js';
 import { syncWorks, refitWorks, applyNight as worksAtNight, labelCache } from './art/works.js';
 import { initInput, onInput, input } from './input.js';
@@ -14,10 +14,11 @@ import { rig, initRig, resetPlayer, setMode, updateRig, startTour, stopTour } fr
 import { setPatronCount, resetPatrons, revalidatePatrons, updatePatrons, onWorksChanged } from './actors/patrons.js';
 import { roomAt } from './actors/nav.js';
 import { cur, updateAim, setHeld, cancelHeld, hang, doAction, holdFromStorage, refreshGhost, renderActions, startPlacing, stopPlacing, startFurniture, cancelFurniture } from './curate.js';
-import { initUI, toast, openPanel, closePanel, panelOpen, updateHud, setModeButtons, setTimeLabel, renderStorage } from './ui/panel.js';
+import { initUI, toast, openPanel, closePanel, panelOpen, updateHud, setModeButtons, setTimeLabel, renderStorage, renderControls } from './ui/panel.js';
+import { initMenu, updateModes, menuOpen } from './game/modes.js';
+import { fillShow } from './game/show.js';
 
-const introEl = document.getElementById('intro');
-const introOpen = () => !introEl.hidden;
+const introOpen = menuOpen;
 
 /* ---------------------------------------------------------------- world */
 function applyTimeAll() {
@@ -83,6 +84,14 @@ on('guards', () => buildGuards());
 on('music', applyVolume);
 on('music-style', restartMusic);
 on('furnish', type => { closePanel(); startFurniture(type); });
+on('furniture-changed', () => syncFurniture());
+on('random-show', async () => {
+  toast('Picking a theme and finding the works…');
+  const { hung, title } = await fillShow();
+  if (!hung) { toast('The collections didn\x27t answer. Check your connection and try again.'); return; }
+  syncWorks(); onWorksChanged(); buildTitle(); updateHud(); renderStorage(); renderControls(); save();
+  toast(`Hung ${hung} works for "${title}". The old show went to storage.`);
+});
 on('hold-storage', i => { holdFromStorage(i); closePanel(); });
 on('loaded', () => {
   labelCache.clear();
@@ -90,6 +99,8 @@ on('loaded', () => {
   setQuality(state.quality);
   setPatronCount(state.patrons);
   rebuildWorld({ keepPlayer: false });
+  changeMode('first');
+  renderControls();
   updateHud();
 });
 
@@ -139,10 +150,7 @@ changeMode(state.camera || 'first');
 updateHud();
 renderActions();
 
-document.getElementById('enterBtn').addEventListener('click', () => {
-  introEl.hidden = true;
-  startAudio();
-});
+initMenu();
 
 // Wall text is drawn on canvases, so redraw once the web fonts arrive
 document.fonts?.ready?.then(() => { labelCache.clear(); buildTitle(); syncWorks(); });
@@ -152,6 +160,8 @@ let last = performance.now();
 renderer.setAnimationLoop(now => {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
+  // The menu covers the whole screen, so skip the 3D work behind it
+  if (introOpen()) return;
   updateRig(dt);
   followCamera(camera);
   updatePatrons(dt, rig.player);
@@ -159,6 +169,7 @@ renderer.setAnimationLoop(now => {
   updateGuardTalk(rig.player, camera, rig.mode !== 'drone' && !introOpen());
   updateAim();
   updateLighting(dt);
+  updateModes(dt);
 
   const L = building.layout;
   const where = rig.mode === 'drone'
