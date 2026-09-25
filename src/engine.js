@@ -65,3 +65,19 @@ export function render() {
   if (usePost) composer.render();
   else renderer.render(scene, camera);
 }
+
+// Render one frame at an exact size and return it as a JPEG data URL (used for the menu background)
+export function renderStill(w, h, quality = 0.88) {
+  const pr = renderer.getPixelRatio();
+  renderer.setPixelRatio(1);
+  renderer.setSize(w, h, false);
+  composer.setPixelRatio(1);
+  composer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  render();
+  const url = renderer.domElement.toDataURL('image/jpeg', quality);
+  renderer.setPixelRatio(pr);
+  resize();
+  return url;
+}

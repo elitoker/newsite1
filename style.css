@@ -218,3 +218,5 @@ input.warmth { accent-color: #d98b3a; }
 #planStorage { display: flex; gap: 8px; overflow-x: auto; min-height: 76px; padding-bottom: 4px; }
 #planStorage img { height: 70px; border-radius: 3px; cursor: grab; box-shadow: 0 1px 4px rgba(0,0,0,.2); user-select: none; touch-action: none; }
 @media (max-width: 760px) { #planner .panes { grid-template-columns: 1fr; grid-template-rows: 1fr 1.2fr; } }
+body.shot #hud, body.shot #modes, body.shot #menuBtn, body.shot #crosshair, body.shot #actions, body.shot #tourBtn, body.shot #joy, body.shot #riseFall, body.shot #toast, body.shot #brief, body.shot #bubble { display: none !important; }
+@media (max-aspect-ratio: 4/5) { #intro .intro-bg { background-image: url("assets/intro-tall.jpg"); } }

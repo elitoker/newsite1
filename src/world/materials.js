@@ -140,9 +140,12 @@ export function plasterTexture() {
       const x = Math.random() * S, y = Math.random() * S, r = 20 + Math.random() * 90;
       const gr = g.createRadialGradient(x, y, 0, x, y, r);
       const shade = Math.random() < 0.5 ? '0,0,0' : '255,255,255';
-      gr.addColorStop(0, `rgba(${shade},0.035)`); gr.addColorStop(1, `rgba(${shade},0)`);
+      gr.addColorStop(0, `rgba(${shade},0.022)`); gr.addColorStop(1, `rgba(${shade},0)`);
       g.fillStyle = gr;
-      for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) g.fillRect(x - r + dx, y - r + dy, r * 2, r * 2);
+      // Draw the blob again one tile over in every direction so the texture wraps without seams
+      for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) {
+        g.save(); g.translate(dx, dy); g.fillRect(x - r, y - r, r * 2, r * 2); g.restore();
+      }
     }
     speckle(g, S, 12000, 0.05);
   });

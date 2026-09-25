@@ -183,3 +183,6 @@ renderer.setAnimationLoop(now => {
 
   if (!plannerOpen()) render();
 });
+
+// Dev: /?shot renders the menu backgrounds (needs serve.ps1 -AllowSave)
+if (new URLSearchParams(location.search).has('shot')) import('./dev/shot.js').then(m => m.run());

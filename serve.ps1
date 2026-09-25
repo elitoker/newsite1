@@ -1,7 +1,9 @@
 # Local web server for The Raquel. Nothing to install.
 # Run it from this folder with:  powershell -ExecutionPolicy Bypass -File serve.ps1
 # Then open http://localhost:8000. Press Ctrl+C to stop.
-param([int]$Port = 8000)
+param([int]$Port = 8000, [switch]$AllowSave)
+# -AllowSave lets the page write images into assets/ (used to render the menu background).
+# Leave it off for normal use.
 
 $root = $PSScriptRoot
 $types = @{
@@ -22,6 +24,16 @@ try {
     $ctx = $listener.GetContext()
     $res = $ctx.Response
     $path = [Uri]::UnescapeDataString($ctx.Request.Url.AbsolutePath).TrimStart('/')
+    if ($AllowSave -and $ctx.Request.HttpMethod -eq 'PUT' -and $path -match '^__save/assets/[\w\-]+\.(jpg|png)$') {
+      $dest = Join-Path $root ($path -replace '^__save/', '')
+      $ms = New-Object IO.MemoryStream
+      $ctx.Request.InputStream.CopyTo($ms)
+      [IO.File]::WriteAllBytes($dest, $ms.ToArray())
+      $res.StatusCode = 204
+      $res.Close()
+      Write-Host "saved $dest"
+      continue
+    }
     if ($path -eq '' -or $path.EndsWith('/')) { $path += 'index.html' }
     $file = [IO.Path]::GetFullPath((Join-Path $root $path))
     if ($file.StartsWith($root) -and [IO.File]::Exists($file)) {
