@@ -4,7 +4,7 @@ import { isTouch } from './config.js';
 import { building, buildBuilding, setWallColor, buildTitle, applyNight as lampsAtNight } from './world/building.js';
 import { applyTime, env, followCamera, setShadowBounds } from './world/sky.js';
 import { syncWorks, refitWorks, applyNight as worksAtNight, labelCache } from './art/works.js';
-import { initInput, onInput, input, lock, unlock } from './input.js';
+import { initInput, onInput, input } from './input.js';
 import { rig, initRig, resetPlayer, setMode, updateRig, startTour, stopTour } from './cameras.js';
 import { setPatronCount, resetPatrons, revalidatePatrons, updatePatrons, onWorksChanged } from './actors/patrons.js';
 import { roomAt } from './actors/nav.js';
@@ -48,8 +48,8 @@ function toggleTour() {
 }
 
 /* ---------------------------------------------------------------- events from the UI */
-on('open-panel', () => { unlock(); openPanel(); });
-on('close-panel', () => { closePanel(); lock(); });
+on('open-panel', openPanel);
+on('close-panel', closePanel);
 on('mode', m => changeMode(m));
 on('tour', toggleTour);
 on('rebuild', () => rebuildWorld());
@@ -60,8 +60,8 @@ on('quality', () => setQuality(state.quality));
 on('patrons', () => setPatronCount(state.patrons));
 on('frames', () => { refitWorks(); syncWorks(); refreshGhost(); renderStorage(); });
 on('works-changed', onWorksChanged);
-on('hold', w => { if (cur.held) cancelHeld(); setHeld(w); closePanel(); lock(); if (isTouch) toast('Face a wall and tap to hang it.'); });
-on('hold-storage', i => { holdFromStorage(i); closePanel(); lock(); });
+on('hold', w => { if (cur.held) cancelHeld(); setHeld(w); closePanel(); if (isTouch) toast('Face a wall and tap to hang it.'); });
+on('hold-storage', i => { holdFromStorage(i); closePanel(); });
 on('loaded', () => {
   labelCache.clear();
   setWallColor(state.wallColor);
@@ -74,11 +74,10 @@ on('loaded', () => {
 /* ---------------------------------------------------------------- input */
 onInput('click', () => {
   if (introOpen()) return;
-  if (!input.locked) { closePanel(); lock(); return; }
+  if (panelOpen()) { closePanel(); return; }
   if (cur.held) hang();
 });
 onInput('tap', () => { if (cur.held) hang(); });
-onInput('lockchange', locked => { if (!locked && !introOpen()) openPanel(); });
 onInput('key', code => {
   if (introOpen()) return;
   switch (code) {
@@ -90,7 +89,7 @@ onInput('key', code => {
     case 'Digit2': changeMode('third'); break;
     case 'Digit3': changeMode('drone'); break;
     case 'KeyT': toggleTour(); break;
-    case 'Tab': if (panelOpen()) { closePanel(); lock(); } else { unlock(); openPanel(); } break;
+    case 'Tab': case 'Escape': if (panelOpen()) closePanel(); else openPanel(); break;
   }
 });
 
@@ -113,7 +112,6 @@ renderActions();
 
 document.getElementById('enterBtn').addEventListener('click', () => {
   introEl.hidden = true;
-  lock();
 });
 
 // Wall text is drawn on canvases, so redraw once the web fonts arrive

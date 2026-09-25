@@ -2,9 +2,9 @@ import { isTouch } from './config.js';
 
 export const input = {
   keys: {}, lookDX: 0, lookDY: 0, wheel: 0,
-  joy: { x: 0, y: 0 }, rise: 0, locked: false, lookActive: false,
+  joy: { x: 0, y: 0 }, rise: 0, dragging: false, lookActive: false,
 };
-const handlers = { key: [], click: [], tap: [], lockchange: [] };
+const handlers = { key: [], click: [], tap: [] };
 export const onInput = (evt, fn) => handlers[evt].push(fn);
 const fire = (evt, ...a) => handlers[evt].forEach(f => f(...a));
 
@@ -14,12 +14,6 @@ export function consumeLook() {
   input.lookDX = input.lookDY = input.wheel = 0;
   return out;
 }
-
-export function lock() {
-  if (isTouch || !canvas) return;
-  try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch {}
-}
-export function unlock() { if (document.pointerLockElement) document.exitPointerLock(); }
 
 export function initInput(el) {
   canvas = el;
@@ -35,17 +29,32 @@ export function initInput(el) {
   document.addEventListener('keyup', e => { input.keys[e.code] = false; });
   addEventListener('blur', () => { for (const k in input.keys) input.keys[k] = false; });
 
-  document.addEventListener('pointerlockchange', () => {
-    input.locked = document.pointerLockElement === canvas;
-    fire('lockchange', input.locked);
+  // Mouse: hold the button and drag to look. A click without dragging acts.
+  let drag = null;
+  canvas.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 };
+    canvas.setPointerCapture(e.pointerId);
   });
-  document.addEventListener('mousemove', e => {
-    if (!input.locked) return;
-    input.lookDX += e.movementX * 0.0022;
-    input.lookDY += e.movementY * 0.0022;
+  canvas.addEventListener('pointermove', e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    drag.x = e.clientX; drag.y = e.clientY;
+    drag.moved += Math.abs(dx) + Math.abs(dy);
+    if (drag.moved < 4) return;
+    input.dragging = true;
+    input.lookDX += dx * 0.004;
+    input.lookDY += dy * 0.004;
   });
+  const dragEnd = e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const clicked = e.type === 'pointerup' && drag.moved < 4;
+    drag = null; input.dragging = false;
+    if (clicked) fire('click');
+  };
+  canvas.addEventListener('pointerup', dragEnd);
+  canvas.addEventListener('pointercancel', dragEnd);
   canvas.addEventListener('wheel', e => { input.wheel += e.deltaY; e.preventDefault(); }, { passive: false });
-  canvas.addEventListener('click', () => { if (!isTouch) fire('click'); });
 
   // Touch: joystick on the left, drag anywhere else to look, tap to act
   const joyEl = document.getElementById('joy'), knob = joyEl.querySelector('.knob');
