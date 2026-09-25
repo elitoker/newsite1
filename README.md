@@ -1,4 +1,4 @@
-# The Raquel
+# Museum Machine
 
 A museum you curate. Walk it in first person, follow yourself in third person, or fly it with the drone.
 

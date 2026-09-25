@@ -5,7 +5,7 @@ import { WALL_T, DOOR_W, DOOR_H, MUSEUM_NAME } from '../config.js';
 import { generateLayout } from './layout.js';
 import { floorMaterial, groundMaterial, worldUV } from './materials.js';
 
-export const building = { layout: null, faces: new Map(), wallMeshes: [], colliders: [] };
+export const building = { layout: null, faces: new Map(), wallMeshes: [], floorMeshes: [], colliders: [] };
 
 const group = new THREE.Group();
 scene.add(group);
@@ -29,7 +29,6 @@ const benchSteel = new THREE.MeshStandardMaterial({ color: 0x1d1d1f, roughness: 
   scene.add(ground);
 }
 
-let lamps = [];
 let titleMesh = null;
 
 const _t = new THREE.Vector3();
@@ -50,7 +49,6 @@ function box(w, h, d, mat, x, y, z, parent = group) {
 export function buildBuilding() {
   group.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   group.clear();
-  lamps = [];
 
   const L = generateLayout({ layout: state.layout, ...state.room }, { wallT: WALL_T, doorW: DOOR_W, doorH: DOOR_H });
   building.layout = L;
@@ -62,6 +60,7 @@ export function buildBuilding() {
     right: new THREE.Vector3(f.rx, 0, f.rz),
   }]));
   building.wallMeshes = [];
+  building.floorMeshes = [];
 
   const fm = floorMaterial(state.floor);
   for (const r of L.rooms) {
@@ -75,6 +74,7 @@ export function buildBuilding() {
     const floor = new THREE.Mesh(fg, fm);
     floor.receiveShadow = true;
     group.add(floor);
+    building.floorMeshes.push(floor);
 
     // Ceiling with skylight openings the sun can actually shine through
     const shape = new THREE.Shape();
@@ -114,14 +114,6 @@ export function buildBuilding() {
       box(sd >= sw ? 0.05 : sw, 0.06, sd >= sw ? sd : 0.05, mullionMat, cx, L.h + hh - 0.05, cz);
     }
 
-    // A warm lamp per room for after dark (capped, since every light costs shader time)
-    if (lamps.length < 8) {
-      const lamp = new THREE.PointLight(0xffd7a8, 0, 0, 2);
-      lamp.position.set(r.cx, L.h - 0.6, r.cz);
-      lamp.userData.area = (r.x1 - r.x0) * (r.z1 - r.z0);
-      group.add(lamp);
-      lamps.push(lamp);
-    }
   }
 
   // Walls, including lintels over doors
@@ -152,10 +144,6 @@ export function buildBuilding() {
   }
 
   buildTitle();
-}
-
-export function applyNight(night) {
-  for (const l of lamps) l.intensity = night * Math.min(40, 8 + l.userData.area * 0.05);
 }
 
 export function setWallColor(hex) {

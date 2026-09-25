@@ -1,6 +1,6 @@
 // Everything tunable in one place.
 
-export const MUSEUM_NAME = 'The Raquel';
+export const MUSEUM_NAME = 'Museum Machine';
 export const STORE_KEY = 'curate-museum-v2';
 export const OLD_STORE_KEY = 'curate-museum-v1';
 
@@ -61,4 +61,9 @@ export const DEFAULTS = {
   patrons: 10,
   quality: isTouch ? 'fast' : 'high',
   camera: 'first',
+  lighting: { brightness: 1, warmth: 0.6, picture: true, fixture: 'track', spots: [] },
+  backdrop: 'park',
+  windows: true,
+  furniture: [],  // { id, type, x, z, rot }
+  guards: true,
 };

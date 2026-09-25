@@ -5,7 +5,7 @@ import { CENTERLINE } from './config.js';
 import { building, placeOnFace } from './world/building.js';
 import { makeWorkGroup, disposeGroup, outerSize, syncWorks, workHitTargets, labelCache } from './art/works.js';
 
-export const cur = { held: null, ghost: null, free: false, aim: null };
+export const cur = { held: null, ghost: null, free: false, aim: null, placing: null };
 const raycaster = new THREE.Raycaster();
 raycaster.far = 60;
 const CENTER = new THREE.Vector2(0, 0);
@@ -50,7 +50,12 @@ function faceFromHit(hit) {
 export function updateAim() {
   raycaster.setFromCamera(CENTER, camera);
   let next = null;
-  if (cur.held) {
+  if (cur.placing === 'spot') {
+    const hit = raycaster.intersectObjects([...building.wallMeshes, ...building.floorMeshes, ...workHitTargets()], false)[0];
+    if (hit) next = { type: 'spot', point: hit.point.clone(), ok: true, id: hit.point.toArray().map(v => v.toFixed(1)).join() };
+    spotMarker.visible = !!hit;
+    if (hit) spotMarker.position.copy(hit.point).addScaledVector(hit.face.normal, 0.02);
+  } else if (cur.held) {
     const hit = raycaster.intersectObjects(building.wallMeshes, false)[0];
     const faceId = hit && faceFromHit(hit);
     const f = faceId && building.faces.get(faceId);
@@ -145,7 +150,10 @@ export function renderActions() {
   const el = document.getElementById('actions');
   const items = [];
   const { held, aim } = cur;
-  if (held) {
+  if (cur.placing === 'spot') {
+    items.push(aim ? { act: 'place', key: 'Click', label: 'Point a spotlight here' } : { note: 'Aim at a wall, a work or the floor' });
+    items.push({ act: 'cancel', key: 'Q', label: 'Stop' });
+  } else if (held) {
     if (aim?.type === 'wall') items.push({ act: 'hang', key: 'Click', label: aim.ok ? 'Hang here' : 'Doesn\'t fit here' });
     else items.push({ note: 'Face a wall to hang the work' });
     items.push({ act: 'free', key: 'V', label: cur.free ? 'Snap to eye level' : 'Hang at any height' });
@@ -163,6 +171,7 @@ export function renderActions() {
 
 export function doAction(act) {
   const { aim } = cur;
+  if (cur.placing === 'spot') { if (act === 'place') placeSpot(); else if (act === 'cancel') stopPlacing(); return; }
   if (act === 'hang') hang();
   else if (act === 'cancel') cancelHeld();
   else if (act === 'free') toggleFree();
@@ -173,3 +182,43 @@ document.getElementById('actions').addEventListener('click', e => {
   const b = e.target.closest('button');
   if (b) doAction(b.dataset.act);
 });
+
+/* ---------------------------------------------------------------- spotlights */
+const spotMarker = new THREE.Mesh(
+  new THREE.RingGeometry(0.12, 0.18, 32),
+  new THREE.MeshBasicMaterial({ color: 0xffd28a, side: THREE.DoubleSide, depthTest: false, transparent: true }),
+);
+spotMarker.renderOrder = 10;
+spotMarker.visible = false;
+scene.add(spotMarker);
+
+export function startPlacing(kind) {
+  if (cur.held) cancelHeld();
+  cur.placing = kind;
+  renderActions();
+}
+export function stopPlacing() {
+  cur.placing = null;
+  spotMarker.visible = false;
+  renderActions();
+}
+
+// Hang the spotlight from the ceiling a couple of meters back toward you, aimed at the spot
+export function placeSpot() {
+  const p = cur.aim?.type === 'spot' && cur.aim.point;
+  if (!p) return;
+  const h = building.layout.h;
+  let dx = camera.position.x - p.x, dz = camera.position.z - p.z;
+  const d = Math.hypot(dx, dz) || 1;
+  const back = Math.min(2.5, d);
+  dx /= d; dz /= d;
+  state.lighting.spots.push({
+    id: newId(),
+    x: p.x + dx * back, y: h - 0.4, z: p.z + dz * back,
+    tx: p.x, ty: p.y, tz: p.z, angle: 0.32, power: 1,
+  });
+  save();
+  emit('spots');
+  emit('toast', 'Spotlight added. Remove it from the Light tab.');
+  stopPlacing();
+}

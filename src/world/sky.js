@@ -94,7 +94,6 @@ export function applyTime(t) {
 
   lerpColor(a.hemiSky, b.hemiSky, k, hemi.color);
   hemi.intensity = mix(a.hemiI, b.hemiI);
-  amb.intensity = 0.04;
 
   env.night = mix(a.night, b.night);
   u.night.value = env.night;

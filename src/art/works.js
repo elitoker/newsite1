@@ -3,7 +3,7 @@ import { scene, maxAniso } from '../engine.js';
 import { state, emit, clamp } from '../state.js';
 import { FRAME_STYLES } from '../config.js';
 import { building, placeOnFace } from '../world/building.js';
-import { frameMaterial, glowMat, isSharedMaterial } from '../world/materials.js';
+import { frameMaterial, glowMat, isSharedMaterial, pictureLightParts } from '../world/materials.js';
 
 const worksGroup = new THREE.Group();
 scene.add(worksGroup);
@@ -122,13 +122,14 @@ export function makeWorkGroup(w, ghost = false) {
     g.add(glow);
     canvas.userData.workId = w.id;
     frame.userData.workId = w.id;
+    if (state.lighting.picture) addPictureLight(g, W, H + fs.border * 2, fs.depth);
   }
   return { group: g, mat, frameMat: fMat, hits: [canvas, frame] };
 }
 
 export function disposeGroup(g) {
   g.traverse(n => {
-    if (n.geometry) n.geometry.dispose();
+    if (n.geometry && !n.geometry.userData.shared) n.geometry.dispose();
     if (n.material && !isSharedMaterial(n.material)) n.material.dispose();
   });
 }
@@ -187,9 +188,28 @@ export function refitWorks() {
   return moved;
 }
 
-const emissiveFor = n => 0.06 + n * 0.5;
+const emissiveFor = n => (state.lighting.picture ? 0.1 : 0.05) + n * 0.45;
 export function applyNight(n) {
   night = n;
-  glowMat.opacity = n * 0.55;
+  glowMat.opacity = state.lighting.picture ? (0.14 + n * 0.45) * Math.min(1.3, state.lighting.brightness) : n * 0.3;
   for (const o of workObjs.values()) if (o.mat.map) o.mat.emissiveIntensity = emissiveFor(n);
+}
+
+// Brass picture light: an arm off the wall and a bar that washes the work from above
+function addPictureLight(g, W, outerH, depth) {
+  const { bar, arm, strip, brass, glow } = pictureLightParts();
+  const len = clamp(W * 0.6, 0.3, 1.3);
+  const y = outerH / 2 + 0.1, z = depth + 0.2;
+  const b = new THREE.Mesh(bar, brass);
+  b.scale.x = len;
+  b.position.set(0, y, z);
+  const a = new THREE.Mesh(arm, brass);
+  a.position.set(0, y + 0.02, z / 2);
+  a.rotation.x = -0.5;
+  const s = new THREE.Mesh(strip, glow);
+  s.scale.x = len * 0.92;
+  s.position.set(0, y - 0.024, z - 0.005);
+  s.rotation.x = Math.PI / 2 + 0.5;
+  b.castShadow = a.castShadow = true;
+  g.add(b, a, s);
 }

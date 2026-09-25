@@ -59,6 +59,7 @@ export function setQuality(q) {
 }
 
 export function setBloom(strength) { bloom.strength = strength; }
+export function setExposure(e) { renderer.toneMappingExposure = e; }
 
 export function render() {
   if (usePost) composer.render();

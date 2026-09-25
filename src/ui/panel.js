@@ -2,6 +2,7 @@ import { state, save, emit, on, clamp, replaceState } from '../state.js';
 import { MUSEUM_NAME, WALL_COLORS, FLOORS, FRAME_STYLES, LAYOUTS, QUALITY, CAMERA_MODES, SUGGESTIONS, isTouch } from '../config.js';
 import { searchCollection } from '../art/collection.js';
 import { workSize } from '../art/works.js';
+import { FIXTURES, MAX_SPOTS } from '../world/lighting.js';
 
 const $ = id => document.getElementById(id);
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -50,10 +51,33 @@ export function renderControls() {
   $('timeR').value = state.time;
   for (const k of ['w', 'd', 'h']) { $(k + 'R').value = state.room[k]; $(k + 'Val').textContent = state.room[k] + ' m'; }
   $('labelsC').checked = state.labels;
+  const lt = state.lighting;
+  $('brightR').value = lt.brightness;
+  $('warmR').value = lt.warmth;
+  $('pictureC').checked = lt.picture;
+  seg($('fixtureSeg'), FIXTURES, lt.fixture);
+  lightLabels();
+  renderSpots();
   $('showTitle').value = state.showTitle;
   $('patronsR').value = state.patrons;
   $('patronsVal').textContent = state.patrons;
 }
+
+function lightLabels() {
+  const lt = state.lighting;
+  $('brightVal').textContent = Math.round(lt.brightness * 100) + '%';
+  $('warmVal').textContent = lt.warmth > 0.7 ? 'Warm' : lt.warmth > 0.35 ? 'Soft white' : 'Neutral';
+}
+
+export function renderSpots() {
+  const spots = state.lighting.spots;
+  $('spotHint').textContent = spots.length
+    ? `${spots.length} of ${MAX_SPOTS} spotlights in use.`
+    : 'Spotlights hang from the ceiling and point wherever you aim. Use them on a work you want to stand out.';
+  $('spotList').innerHTML = spots.map((s, i) => `<div class="item"><span>Spotlight ${i + 1}</span><button class="quiet" data-rm="${i}">Remove</button></div>`).join('');
+  $('addSpot').disabled = spots.length >= MAX_SPOTS;
+}
+on('spots', renderSpots);
 
 export function setTimeLabel(name) { $('timeVal').textContent = name; }
 
@@ -185,6 +209,26 @@ export function initUI() {
     });
   }
   $('labelsC').addEventListener('change', e => { state.labels = e.target.checked; save(); emit('frames'); });
+
+  /* Light */
+  $('brightR').addEventListener('input', e => { state.lighting.brightness = +e.target.value; lightLabels(); save(); emit('lighting'); });
+  $('warmR').addEventListener('input', e => { state.lighting.warmth = +e.target.value; lightLabels(); save(); emit('lighting'); });
+  $('pictureC').addEventListener('change', e => { state.lighting.picture = e.target.checked; save(); emit('picture-lights'); });
+  $('fixtureSeg').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    state.lighting.fixture = b.dataset.k;
+    pressed($('fixtureSeg'), b.dataset.k);
+    save(); emit('fixtures');
+  });
+  $('addSpot').addEventListener('click', () => emit('place', 'spot'));
+  $('clearSpots').addEventListener('click', () => { state.lighting.spots = []; save(); emit('spots'); });
+  $('spotList').addEventListener('click', e => {
+    const b = e.target.closest('[data-rm]');
+    if (!b) return;
+    state.lighting.spots.splice(+b.dataset.rm, 1);
+    save(); emit('spots');
+  });
 
   /* Show */
   $('showTitle').addEventListener('input', e => { state.showTitle = e.target.value || 'Untitled Exhibition'; save(); emit('title'); });

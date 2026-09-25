@@ -87,7 +87,20 @@ export function frameMaterial(style) {
   const f = FRAME_STYLES[style];
   return frameMats[style] || (frameMats[style] = new THREE.MeshStandardMaterial({ color: f.color, metalness: f.metal, roughness: f.rough }));
 }
-export const isSharedMaterial = m => Object.values(frameMats).includes(m) || m === glowMat;
+export const isSharedMaterial = m => Object.values(frameMats).includes(m) || m === glowMat || m === plParts?.brass || m === plParts?.glow;
+
+// Shared parts for the picture light over every work
+const shared = g => { g.userData.shared = true; return g; };
+let plParts = null;
+export function pictureLightParts() {
+  return plParts || (plParts = {
+    bar: shared(new THREE.CylinderGeometry(0.022, 0.022, 1, 12).rotateZ(Math.PI / 2)),
+    arm: shared(new THREE.CylinderGeometry(0.008, 0.008, 0.24, 6).rotateX(Math.PI / 2)),
+    strip: shared(new THREE.PlaneGeometry(1, 0.018)),
+    brass: new THREE.MeshStandardMaterial({ color: 0xb08d57, roughness: 0.3, metalness: 0.9 }),
+    glow: new THREE.MeshBasicMaterial({ color: 0xfff0d8, side: THREE.DoubleSide }),
+  });
+}
 
 // Soft pool of light from a picture light above each work, visible after dark
 const glowTex = (() => {

@@ -6,7 +6,9 @@ export const newId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Dat
 
 export function normalize(s = {}) {
   const d = clone(DEFAULTS);
-  const out = { ...d, ...s, room: { ...d.room, ...(s.room || {}) } };
+  const out = { ...d, ...s, room: { ...d.room, ...(s.room || {}) }, lighting: { ...d.lighting, ...(s.lighting || {}) } };
+  if (!Array.isArray(out.lighting.spots)) out.lighting.spots = [];
+  if (!Array.isArray(out.furniture)) out.furniture = [];
   out.works = Array.isArray(out.works) ? out.works.filter(w => w && w.src && w.faceId) : [];
   out.storage = Array.isArray(out.storage) ? out.storage.filter(w => w && w.src) : [];
   return out;

@@ -1,14 +1,15 @@
 import { renderer, camera, mountRenderer, render, setQuality } from './engine.js';
 import { state, save, on } from './state.js';
 import { isTouch } from './config.js';
-import { building, buildBuilding, setWallColor, buildTitle, applyNight as lampsAtNight } from './world/building.js';
+import { building, buildBuilding, setWallColor, buildTitle } from './world/building.js';
+import { buildLighting, applyLighting, updateLighting, syncSpots } from './world/lighting.js';
 import { applyTime, env, followCamera, setShadowBounds } from './world/sky.js';
 import { syncWorks, refitWorks, applyNight as worksAtNight, labelCache } from './art/works.js';
 import { initInput, onInput, input } from './input.js';
 import { rig, initRig, resetPlayer, setMode, updateRig, startTour, stopTour } from './cameras.js';
 import { setPatronCount, resetPatrons, revalidatePatrons, updatePatrons, onWorksChanged } from './actors/patrons.js';
 import { roomAt } from './actors/nav.js';
-import { cur, updateAim, setHeld, cancelHeld, hang, doAction, holdFromStorage, refreshGhost, renderActions } from './curate.js';
+import { cur, updateAim, setHeld, cancelHeld, hang, doAction, holdFromStorage, refreshGhost, renderActions, startPlacing } from './curate.js';
 import { initUI, toast, openPanel, closePanel, panelOpen, updateHud, setModeButtons, setTimeLabel, renderStorage } from './ui/panel.js';
 
 const introEl = document.getElementById('intro');
@@ -17,7 +18,7 @@ const introOpen = () => !introEl.hidden;
 /* ---------------------------------------------------------------- world */
 function applyTimeAll() {
   applyTime(state.time);
-  lampsAtNight(env.night);
+  applyLighting(env.night);
   worksAtNight(env.night);
   setTimeLabel(env.name);
 }
@@ -26,6 +27,7 @@ function rebuildWorld({ keepPlayer = true } = {}) {
   buildBuilding();
   const moved = refitWorks();
   syncWorks();
+  buildLighting();
   setShadowBounds(building.layout.bounds);
   applyTimeAll();
   if (keepPlayer) revalidatePatrons(); else resetPatrons();
@@ -56,11 +58,16 @@ on('rebuild', () => rebuildWorld());
 on('wall-color', hex => setWallColor(hex));
 on('title', () => { buildTitle(); updateHud(); });
 on('time', applyTimeAll);
-on('quality', () => setQuality(state.quality));
+on('quality', () => { setQuality(state.quality); buildLighting(); });
+on('lighting', () => { applyLighting(); worksAtNight(env.night); });
+on('fixtures', () => buildLighting());
+on('picture-lights', () => { syncWorks(); buildLighting(); worksAtNight(env.night); });
+on('spots', () => syncSpots());
 on('patrons', () => setPatronCount(state.patrons));
 on('frames', () => { refitWorks(); syncWorks(); refreshGhost(); renderStorage(); });
 on('works-changed', onWorksChanged);
 on('hold', w => { if (cur.held) cancelHeld(); setHeld(w); closePanel(); if (isTouch) toast('Face a wall and tap to hang it.'); });
+on('place', kind => { closePanel(); startPlacing(kind); });
 on('hold-storage', i => { holdFromStorage(i); closePanel(); });
 on('loaded', () => {
   labelCache.clear();
@@ -75,9 +82,10 @@ on('loaded', () => {
 onInput('click', () => {
   if (introOpen()) return;
   if (panelOpen()) { closePanel(); return; }
-  if (cur.held) hang();
+  if (cur.placing) doAction('place');
+  else if (cur.held) hang();
 });
-onInput('tap', () => { if (cur.held) hang(); });
+onInput('tap', () => { if (cur.placing) doAction('place'); else if (cur.held) hang(); });
 onInput('key', code => {
   if (introOpen()) return;
   switch (code) {
@@ -102,6 +110,7 @@ setQuality(state.quality);
 buildBuilding();
 refitWorks();
 syncWorks();
+buildLighting();
 setShadowBounds(building.layout.bounds);
 applyTimeAll();
 setPatronCount(state.patrons);
@@ -126,6 +135,7 @@ renderer.setAnimationLoop(now => {
   followCamera(camera);
   updatePatrons(dt, rig.player);
   updateAim();
+  updateLighting(dt);
 
   const L = building.layout;
   const where = rig.mode === 'drone'
