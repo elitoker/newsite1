@@ -58,6 +58,7 @@
     <button role="tab" data-tab="upload" aria-selected="false">Upload</button>
     <button role="tab" data-tab="room" aria-selected="false">Building</button>
     <button role="tab" data-tab="light" aria-selected="false">Light</button>
+    <button role="tab" data-tab="furnish" aria-selected="false">Furnish</button>
     <button role="tab" data-tab="show" aria-selected="false">Show</button>
   </div>
 
@@ -105,10 +106,16 @@
     </div>
   </section>
 
+  <section class="tab" id="tab-furnish">
+    <p class="hint">Pick a piece, aim at the floor and click to place it. R turns it. Aim at a placed piece to move, turn or remove it.</p>
+    <div id="furnishGrid" class="grid"></div>
+  </section>
+
   <section class="tab" id="tab-show">
     <div class="field"><label for="showTitle">Exhibition title</label><input type="text" id="showTitle"></div>
     <p class="hint" id="showCount"></p>
     <div class="field"><label for="patronsR">Visitors <span class="val" id="patronsVal"></span></label><input type="range" id="patronsR" min="0" max="30" step="1"></div>
+    <label class="check" style="margin:-6px 0 18px"><input type="checkbox" id="guardsC"> A guard in every room</label>
     <div class="field"><span class="lbl">Graphics</span><div class="seg" id="qualitySeg"></div></div>
     <div class="field"><span class="lbl">In storage</span><div id="storage" class="grid"></div></div>
     <div class="row">

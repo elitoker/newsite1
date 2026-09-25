@@ -4,6 +4,7 @@ import { searchCollection } from '../art/collection.js';
 import { workSize } from '../art/works.js';
 import { FIXTURES, MAX_SPOTS } from '../world/lighting.js';
 import { BACKDROPS } from '../world/outside.js';
+import { FURNITURE, furnitureThumbs } from '../world/furniture.js';
 
 const $ = id => document.getElementById(id);
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -64,6 +65,7 @@ export function renderControls() {
   $('showTitle').value = state.showTitle;
   $('patronsR').value = state.patrons;
   $('patronsVal').textContent = state.patrons;
+  $('guardsC').checked = state.guards;
 }
 
 function lightLabels() {
@@ -81,6 +83,19 @@ export function renderSpots() {
   $('addSpot').disabled = spots.length >= MAX_SPOTS;
 }
 on('spots', renderSpots);
+
+let furnishDrawn = false;
+function renderFurnish() {
+  if (furnishDrawn) return;
+  furnishDrawn = true;
+  const t = furnitureThumbs();
+  $('furnishGrid').innerHTML = Object.entries(FURNITURE).map(([k, f]) => `
+    <button class="work" data-type="${k}">
+      <div class="thumb"><img src="${t[k]}" alt=""></div>
+      <div class="t">${esc(f.label)}</div>
+      <div class="a">${f.w} × ${f.d} m</div>
+    </button>`).join('');
+}
 
 export function setTimeLabel(name) { $('timeVal').textContent = name; }
 
@@ -113,6 +128,7 @@ export function initUI() {
     document.querySelectorAll('.tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + b.dataset.tab));
     if (b.dataset.tab === 'show') renderStorage();
+    if (b.dataset.tab === 'furnish') renderFurnish();
   }));
 
   /* Collection */
@@ -214,6 +230,10 @@ export function initUI() {
     });
   }
   $('labelsC').addEventListener('change', e => { state.labels = e.target.checked; save(); emit('frames'); });
+
+  /* Furnish */
+  $('furnishGrid').addEventListener('click', e => { const b = e.target.closest('[data-type]'); if (b) emit('furnish', b.dataset.type); });
+  $('guardsC').addEventListener('change', e => { state.guards = e.target.checked; save(); emit('guards'); });
 
   /* Light */
   $('brightR').addEventListener('input', e => { state.lighting.brightness = +e.target.value; lightLabels(); save(); emit('lighting'); });

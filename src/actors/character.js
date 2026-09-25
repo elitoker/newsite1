@@ -59,6 +59,12 @@ export function makeCharacter(seed = Math.random() * 1e9, look = {}) {
 
   const torso = mesh(geo('torso', () => new THREE.CapsuleGeometry(0.16, 0.36, 4, 14)), mat(top), body, 0, 1.2, 0);
   torso.scale.set(1.15, 1, 0.72);
+  if (look.suit) {
+    // Shirt front, tie and a lapel line on a dark jacket
+    mesh(geo('shirt', () => new THREE.BoxGeometry(0.11, 0.24, 0.01)), mat('#f2f0ea', 0.6), body, 0, 1.36, 0.118);
+    mesh(geo('tie', () => new THREE.BoxGeometry(0.035, 0.22, 0.012)), mat(look.tie || '#1a1c24', 0.5), body, 0, 1.33, 0.126);
+    mesh(geo('earpiece', () => new THREE.SphereGeometry(0.018, 8, 6)), mat('#e8e4dc', 0.4), body, 0.108, 1.66, 0);
+  }
   if (coat) {
     const c = mesh(geo('coat', () => new THREE.CylinderGeometry(0.19, 0.27, 0.72, 14)), mat(coat, 0.85), body, 0, 0.98, 0);
     c.scale.z = 0.78;
@@ -96,13 +102,14 @@ export function makeCharacter(seed = Math.random() * 1e9, look = {}) {
     if (moving) phase += dt * (3 + speed * 3.2);
     const s = Math.sin(phase);
     const look = pose === 'look' && !moving;
+    const guard = pose === 'guard' && !moving;
     const k = 1 - Math.exp(-dt * 12);
     const target = {
       l: moving ? s * amp : 0,
       r: moving ? -s * amp : 0,
-      al: moving ? -s * amp * 0.8 : (look ? 0.3 : 0.02),   // hands clasped behind the back while looking
-      ar: moving ? s * amp * 0.8 : (look ? 0.3 : 0.02),
-      az: look ? -0.15 : 0.06,
+      al: moving ? -s * amp * 0.8 : (look ? 0.3 : guard ? -0.32 : 0.02),   // hands clasped behind the back while looking, in front on guard
+      ar: moving ? s * amp * 0.8 : (look ? 0.3 : guard ? -0.32 : 0.02),
+      az: look ? -0.15 : guard ? -0.22 : 0.06,
       hx: look ? -0.08 : 0,
     };
     for (const key in cur) cur[key] += (target[key] - cur[key]) * k;

@@ -4,6 +4,7 @@ import { state, save, emit, newId, clamp } from './state.js';
 import { CENTERLINE } from './config.js';
 import { building, placeOnFace } from './world/building.js';
 import { makeWorkGroup, disposeGroup, outerSize, syncWorks, workHitTargets, labelCache } from './art/works.js';
+import { FURNITURE, makeFurniture, fits, syncFurniture, furnitureHitTargets } from './world/furniture.js';
 
 export const cur = { held: null, ghost: null, free: false, aim: null, placing: null };
 const raycaster = new THREE.Raycaster();
@@ -55,6 +56,9 @@ export function updateAim() {
     if (hit) next = { type: 'spot', point: hit.point.clone(), ok: true, id: hit.point.toArray().map(v => v.toFixed(1)).join() };
     spotMarker.visible = !!hit;
     if (hit) spotMarker.position.copy(hit.point).addScaledVector(hit.face.normal, 0.02);
+  } else if (cur.placing === 'furniture') {
+    aimFurniture();
+    next = cur.furn.aim;
   } else if (cur.held) {
     const hit = raycaster.intersectObjects(building.wallMeshes, false)[0];
     const faceId = hit && faceFromHit(hit);
@@ -74,8 +78,9 @@ export function updateAim() {
       cur.ghost.frameMat.opacity = next.ok ? 0.35 : 0.6;
     } else if (cur.ghost) cur.ghost.group.visible = false;
   } else {
-    const hit = raycaster.intersectObjects([...building.wallMeshes, ...workHitTargets()], false)[0];
+    const hit = raycaster.intersectObjects([...building.wallMeshes, ...workHitTargets(), ...furnitureHitTargets()], false)[0];
     if (hit && hit.object.userData.workId && hit.distance < 10) next = { type: 'work', id: hit.object.userData.workId };
+    else if (hit && hit.object.userData.furnitureId && hit.distance < 10) next = { type: 'furniture', id: hit.object.userData.furnitureId };
   }
   const key = a => (a ? `${a.type}|${a.id}|${a.ok}` : '');
   const changed = key(next) !== key(cur.aim);
@@ -150,7 +155,12 @@ export function renderActions() {
   const el = document.getElementById('actions');
   const items = [];
   const { held, aim } = cur;
-  if (cur.placing === 'spot') {
+  if (cur.placing === 'furniture') {
+    const a = cur.furn.aim;
+    items.push(a ? { act: 'place', key: 'Click', label: a.ok ? `Place the ${FURNITURE[cur.furn.type].label.toLowerCase()}` : 'Blocked here' } : { note: 'Aim at the floor' });
+    items.push({ act: 'rotate', key: 'R', label: 'Turn' });
+    items.push({ act: 'cancel', key: 'Q', label: cur.furn.origin ? 'Put it back' : 'Never mind' });
+  } else if (cur.placing === 'spot') {
     items.push(aim ? { act: 'place', key: 'Click', label: 'Point a spotlight here' } : { note: 'Aim at a wall, a work or the floor' });
     items.push({ act: 'cancel', key: 'Q', label: 'Stop' });
   } else if (held) {
@@ -163,6 +173,12 @@ export function renderActions() {
     if (w) items.push({ note: `${w.artist || 'Unknown artist'}, ${w.title}` });
     items.push({ act: 'pickup', key: 'E', label: 'Move' });
     items.push({ act: 'remove', key: 'X', label: 'Take down', warn: true });
+  } else if (aim?.type === 'furniture') {
+    const f = state.furniture.find(x => x.id === aim.id);
+    if (f) items.push({ note: FURNITURE[f.type].label });
+    items.push({ act: 'pickup', key: 'E', label: 'Move' });
+    items.push({ act: 'rotate', key: 'R', label: 'Turn' });
+    items.push({ act: 'remove', key: 'X', label: 'Remove', warn: true });
   }
   el.innerHTML = items.map(i => i.note
     ? `<span class="note">${esc(i.note)}</span>`
@@ -172,6 +188,13 @@ export function renderActions() {
 export function doAction(act) {
   const { aim } = cur;
   if (cur.placing === 'spot') { if (act === 'place') placeSpot(); else if (act === 'cancel') stopPlacing(); return; }
+  if (cur.placing === 'furniture') { if (act === 'place') placeFurniture(); else if (act === 'cancel') cancelFurniture(); else if (act === 'rotate') rotateFurniture(); return; }
+  if (aim?.type === 'furniture') {
+    if (act === 'pickup') pickUpFurniture(aim.id);
+    else if (act === 'remove') removeFurniture(aim.id);
+    else if (act === 'rotate') rotateFurniture();
+    return;
+  }
   if (act === 'hang') hang();
   else if (act === 'cancel') cancelHeld();
   else if (act === 'free') toggleFree();
@@ -194,6 +217,7 @@ scene.add(spotMarker);
 
 export function startPlacing(kind) {
   if (cur.held) cancelHeld();
+  if (cur.placing === 'furniture') cancelFurniture();
   cur.placing = kind;
   renderActions();
 }
@@ -221,4 +245,88 @@ export function placeSpot() {
   emit('spots');
   emit('toast', 'Spotlight added. Remove it from the Light tab.');
   stopPlacing();
+}
+
+/* ---------------------------------------------------------------- furniture */
+// cur.furn = { type, rot, origin, ghost, aim } while carrying a piece
+export function startFurniture(type, origin = null) {
+  if (cur.held) cancelHeld();
+  if (cur.placing === 'furniture') cancelFurniture();
+  const ghost = makeFurniture(type, true);
+  ghost.visible = false;
+  scene.add(ghost);
+  cur.placing = 'furniture';
+  cur.furn = { type, rot: origin?.rot ?? 0, origin, ghost, aim: null };
+  renderActions();
+}
+
+function aimFurniture() {
+  const f = cur.furn;
+  const hit = raycaster.intersectObjects(building.floorMeshes, false)[0];
+  if (!hit || hit.distance > 14) { f.ghost.visible = false; f.aim = null; return; }
+  const p = { type: f.type, x: hit.point.x, z: hit.point.z, rot: f.rot };
+  const ok = fits(p, f.origin?.id);
+  f.ghost.visible = true;
+  f.ghost.position.set(p.x, 0, p.z);
+  f.ghost.rotation.y = f.rot;
+  f.ghost.traverse(o => { if (o.isMesh && o.material.emissive) o.material.emissive.set(ok ? 0x000000 : 0x8a1c14); });
+  f.aim = { type: 'furniture-place', id: `${p.x.toFixed(1)},${p.z.toFixed(1)},${f.rot}`, ok, x: p.x, z: p.z };
+}
+
+function dropGhost() {
+  const f = cur.furn;
+  if (!f) return;
+  scene.remove(f.ghost);
+  f.ghost.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+  cur.furn = null;
+  cur.placing = null;
+}
+
+export function placeFurniture() {
+  const f = cur.furn, a = f?.aim;
+  if (!a) return;
+  if (!a.ok) { emit('toast', 'That spot is blocked by a wall or another piece. Try somewhere else.'); return; }
+  state.furniture.push({ id: f.origin?.id || newId(), type: f.type, x: a.x, z: a.z, rot: f.rot });
+  dropGhost();
+  syncFurniture();
+  save();
+  renderActions();
+}
+
+export function cancelFurniture() {
+  const f = cur.furn;
+  if (!f) return;
+  if (f.origin) state.furniture.push(f.origin);
+  dropGhost();
+  syncFurniture();
+  save();
+  renderActions();
+}
+
+export function rotateFurniture(step = Math.PI / 4) {
+  if (cur.furn) { cur.furn.rot = (cur.furn.rot + step) % (Math.PI * 2); return; }
+  const f = cur.aim?.type === 'furniture' && state.furniture.find(x => x.id === cur.aim.id);
+  if (!f) return;
+  const turned = { ...f, rot: (f.rot + step) % (Math.PI * 2) };
+  if (!fits(turned, f.id)) { emit('toast', 'No room to turn it here.'); return; }
+  f.rot = turned.rot;
+  syncFurniture();
+  save();
+}
+
+function pickUpFurniture(id) {
+  const f = state.furniture.find(x => x.id === id);
+  if (!f) return;
+  state.furniture = state.furniture.filter(x => x.id !== id);
+  syncFurniture();
+  startFurniture(f.type, f);
+}
+
+function removeFurniture(id) {
+  const f = state.furniture.find(x => x.id === id);
+  if (!f) return;
+  state.furniture = state.furniture.filter(x => x.id !== id);
+  syncFurniture();
+  save();
+  emit('toast', `Removed the ${FURNITURE[f.type].label.toLowerCase()}.`);
 }

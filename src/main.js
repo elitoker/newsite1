@@ -4,13 +4,15 @@ import { isTouch } from './config.js';
 import { building, buildBuilding, setWallColor, buildTitle } from './world/building.js';
 import { buildLighting, applyLighting, updateLighting, syncSpots } from './world/lighting.js';
 import { buildOutside, applyOutsideNight } from './world/outside.js';
+import { syncFurniture, refitFurniture } from './world/furniture.js';
+import { buildGuards, updateGuards } from './actors/guards.js';
 import { applyTime, env, followCamera, setShadowBounds } from './world/sky.js';
 import { syncWorks, refitWorks, applyNight as worksAtNight, labelCache } from './art/works.js';
 import { initInput, onInput, input } from './input.js';
 import { rig, initRig, resetPlayer, setMode, updateRig, startTour, stopTour } from './cameras.js';
 import { setPatronCount, resetPatrons, revalidatePatrons, updatePatrons, onWorksChanged } from './actors/patrons.js';
 import { roomAt } from './actors/nav.js';
-import { cur, updateAim, setHeld, cancelHeld, hang, doAction, holdFromStorage, refreshGhost, renderActions, startPlacing } from './curate.js';
+import { cur, updateAim, setHeld, cancelHeld, hang, doAction, holdFromStorage, refreshGhost, renderActions, startPlacing, stopPlacing, startFurniture, cancelFurniture } from './curate.js';
 import { initUI, toast, openPanel, closePanel, panelOpen, updateHud, setModeButtons, setTimeLabel, renderStorage } from './ui/panel.js';
 
 const introEl = document.getElementById('intro');
@@ -27,15 +29,19 @@ function applyTimeAll() {
 
 function rebuildWorld({ keepPlayer = true } = {}) {
   buildBuilding();
+  const gone = refitFurniture();
+  syncFurniture();
   const moved = refitWorks();
   syncWorks();
   buildLighting();
   buildOutside();
   setShadowBounds(building.layout.bounds);
   applyTimeAll();
+  buildGuards();
   if (keepPlayer) revalidatePatrons(); else resetPatrons();
   if (!keepPlayer || !roomAt(building.layout, rig.player.x, rig.player.z)) resetPlayer();
   if (rig.tour) startTour();
+  if (gone) toast(gone === 1 ? "A piece of furniture didn't fit the new building and was removed." : `${gone} pieces of furniture didn't fit the new building and were removed.`);
   if (moved) toast(`${moved} work${moved === 1 ? '' : 's'} didn't fit the new building and went to storage.`);
   save();
 }
@@ -70,8 +76,10 @@ on('backdrop', () => buildOutside());
 on('patrons', () => setPatronCount(state.patrons));
 on('frames', () => { refitWorks(); syncWorks(); refreshGhost(); renderStorage(); });
 on('works-changed', onWorksChanged);
-on('hold', w => { if (cur.held) cancelHeld(); setHeld(w); closePanel(); if (isTouch) toast('Face a wall and tap to hang it.'); });
+on('hold', w => { if (cur.placing === 'furniture') cancelFurniture(); else if (cur.placing) stopPlacing(); if (cur.held) cancelHeld(); setHeld(w); closePanel(); if (isTouch) toast('Face a wall and tap to hang it.'); });
 on('place', kind => { closePanel(); startPlacing(kind); });
+on('guards', () => buildGuards());
+on('furnish', type => { closePanel(); startFurniture(type); });
 on('hold-storage', i => { holdFromStorage(i); closePanel(); });
 on('loaded', () => {
   labelCache.clear();
@@ -97,6 +105,7 @@ onInput('key', code => {
     case 'KeyX': case 'Delete': case 'Backspace': doAction('remove'); break;
     case 'KeyQ': doAction('cancel'); break;
     case 'KeyV': doAction('free'); break;
+    case 'KeyR': doAction('rotate'); break;
     case 'Digit1': changeMode('first'); break;
     case 'Digit2': changeMode('third'); break;
     case 'Digit3': changeMode('drone'); break;
@@ -112,6 +121,7 @@ initUI();
 initRig();
 setQuality(state.quality);
 buildBuilding();
+syncFurniture();
 refitWorks();
 syncWorks();
 buildLighting();
@@ -119,6 +129,7 @@ buildOutside();
 setShadowBounds(building.layout.bounds);
 applyTimeAll();
 setPatronCount(state.patrons);
+buildGuards();
 resetPlayer();
 changeMode(state.camera || 'first');
 updateHud();
@@ -139,6 +150,7 @@ renderer.setAnimationLoop(now => {
   updateRig(dt);
   followCamera(camera);
   updatePatrons(dt, rig.player);
+  updateGuards(dt);
   updateAim();
   updateLighting(dt);
 

@@ -1,4 +1,4 @@
-// Raquel Rudy's work, from her archive at raquelrudy.com.
+// Raquel Weinberg's work, from her archive at raquelrudy.com.
 // Images load straight from her Cargo site, which allows it (CORS header present).
 
 const IN = 2.54;
@@ -23,7 +23,7 @@ export const RAQUEL = WORKS.map(([title, medium, a, b, date, hash, name, w, h]) 
   source: 'raquelrudy.com',
   sourceId: hash,
   title, medium, date,
-  artist: 'Raquel Rudy',
+  artist: 'Raquel Weinberg',
   thumb: img(hash, name, 300),
   src: img(hash, name, 1600),
   aspect: w / h,
@@ -31,4 +31,4 @@ export const RAQUEL = WORKS.map(([title, medium, a, b, date, hash, name, w, h]) 
   wCm: b * IN,
 }));
 
-export const isRaquelQuery = q => /raquel|rudy/i.test(q);
+export const isRaquelQuery = q => /raquel|weinberg/i.test(q);
