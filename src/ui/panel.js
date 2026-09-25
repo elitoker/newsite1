@@ -1,9 +1,10 @@
 import { state, save, emit, on, clamp, replaceState } from '../state.js';
 import { MUSEUM_NAME, WALL_COLORS, FLOORS, FRAME_STYLES, LAYOUTS, QUALITY, CAMERA_MODES, SUGGESTIONS, isTouch } from '../config.js';
-import { searchCollection } from '../art/collection.js';
+import { searchArt, measureAspect, relay } from '../art/collection.js';
 import { workSize } from '../art/works.js';
 import { FIXTURES, MAX_SPOTS } from '../world/lighting.js';
 import { BACKDROPS } from '../world/outside.js';
+import { MUSIC_STYLES } from '../audio.js';
 const SKYLIGHTS = { strips: 'Strips', giant: 'One giant', none: 'None' };
 import { FURNITURE, furnitureThumbs } from '../world/furniture.js';
 
@@ -68,6 +69,11 @@ export function renderControls() {
   $('patronsR').value = state.patrons;
   $('patronsVal').textContent = state.patrons;
   $('guardsC').checked = state.guards;
+  seg($('musicSeg'), MUSIC_STYLES, state.music.style);
+  $('volR').value = state.music.volume;
+  $('volVal').textContent = Math.round(state.music.volume * 100) + '%';
+  $('musicC').checked = state.music.on;
+  $('murmurC').checked = state.music.murmur !== false;
 }
 
 function lightLabels() {
@@ -139,33 +145,44 @@ export function initUI() {
   /* Collection */
   let results = [];
   const status = $('searchStatus');
+  let searchId = 0;
+  const card = (r, i) => {
+    const { W, H } = workSize(r);
+    const size = r.aspect ? `<br>${Math.round(H * 100)} × ${Math.round(W * 100)} cm` : '';
+    return `<button class="work" data-i="${i}">
+          <div class="thumb"><img loading="lazy" src="${esc(r.thumb)}" alt=""></div>
+          <div class="t">${esc(r.title)}</div>
+          <div class="a">${esc(r.artist)}${r.date ? ', ' + esc(r.date) : ''}${size}</div>
+        </button>`;
+  };
   async function search(q) {
     q = q.trim();
     if (!q) return;
+    const id = ++searchId;
     $('q').value = q;
-    status.textContent = `Searching for "${q}"…`;
+    status.textContent = `Searching four collections for "${q}"…`;
     $('results').innerHTML = '';
     const paintingsOnly = $('paintingsOnly').checked;
-    try {
-      results = await searchCollection(q, { paintingsOnly });
-      $('results').innerHTML = results.map((r, i) => {
-        const { W, H } = workSize(r);
-        return `<button class="work" data-i="${i}">
-          <div class="thumb"><img loading="lazy" src="${esc(r.thumb)}" alt=""></div>
-          <div class="t">${esc(r.title)}</div>
-          <div class="a">${esc(r.artist)}${r.date ? ', ' + esc(r.date) : ''}<br>${Math.round(H * 100)} × ${Math.round(W * 100)} cm</div>
-        </button>`;
-      }).join('');
-      status.textContent = results.length
-        ? 'Pick a work, then face a wall and click to hang it.'
-        : `No public domain ${paintingsOnly ? 'paintings' : 'works'} matched "${q}". Try the artist's last name, or turn off Paintings only.`;
-    } catch {
-      status.textContent = 'The collection didn\'t respond. Check your connection and search again.';
-    }
+    const kind = paintingsOnly ? 'paintings' : 'works';
+    const show = ({ byArtist, other, artistName, done, failed }) => {
+      if (id !== searchId) return;
+      if (failed) { status.textContent = 'The collections didn\'t respond. Check your connection and search again.'; return; }
+      results = [...byArtist, ...other];
+      let html = '';
+      if (byArtist.length) html += `<h3 class="sub span">By ${esc(artistName)}</h3>` + byArtist.map((r, i) => card(r, i)).join('');
+      if (other.length) html += `<h3 class="sub span">${byArtist.length ? 'Other works that mention' : 'Works that mention'} "${esc(q)}"</h3>` + other.map((r, i) => card(r, i + byArtist.length)).join('');
+      $('results').innerHTML = html;
+      const more = done ? '' : ' Still checking more collections…';
+      if (byArtist.length) status.textContent = `${byArtist.length} ${kind} by ${artistName}. Pick one, then face a wall and click to hang it.${more}`;
+      else if (!done) status.textContent = `Searching for "${q}"…`;
+      else if (other.length) status.textContent = `No public domain ${kind} by an artist named "${q}" turned up. If they worked after about 1930, their work is probably still under copyright, so open collections can't show it. You can add images yourself in the Upload tab. Below are other works that mention "${q}".`;
+      else status.textContent = `Nothing public domain matched "${q}". Check the spelling, try the last name only, or turn off Paintings only. For living or recent artists, add images in the Upload tab.`;
+    };
+    await searchArt(q, { paintingsOnly, onUpdate: show });
   }
-  $('results').addEventListener('click', e => {
+  $('results').addEventListener('click', async e => {
     const b = e.target.closest('.work');
-    if (b) emit('hold', { ...results[+b.dataset.i] });
+    if (b) emit('hold', await measureAspect({ ...results[+b.dataset.i] }));
   });
   $('q').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); search($('q').value); } });
   $('paintingsOnly').addEventListener('change', () => { if ($('q').value.trim()) search($('q').value); });
@@ -191,6 +208,22 @@ export function initUI() {
     };
     img.onerror = () => toast('That file couldn\'t be read as an image. Try a JPG or PNG.');
     img.src = URL.createObjectURL(f);
+  });
+  // A link is loaded through the image relay, so any site works and nothing big goes into storage
+  $('upUrlBtn').addEventListener('click', () => {
+    const url = $('upUrl').value.trim();
+    if (!/^https?:\/\//i.test(url)) { toast('Paste a full link that starts with https://'); return; }
+    const src = relay(url, 1600);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      upload = { src, aspect: img.naturalWidth / img.naturalHeight };
+      $('uploadPreview').src = src;
+      $('uploadPreview').style.display = 'block';
+      $('upHang').disabled = false;
+    };
+    img.onerror = () => toast('That link didn\'t load as an image. Right-click the picture on its page and copy the image address.');
+    img.src = src;
   });
   $('upHang').addEventListener('click', () => {
     if (!upload) return;
@@ -240,6 +273,20 @@ export function initUI() {
   /* Furnish */
   for (const id of ['furnishGrid', 'archGrid', 'sculptureGrid']) $(id).addEventListener('click', e => { const b = e.target.closest('[data-type]'); if (b) emit('furnish', b.dataset.type); });
   $('guardsC').addEventListener('change', e => { state.guards = e.target.checked; save(); emit('guards'); });
+
+  /* Music */
+  $('musicSeg').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    state.music.style = b.dataset.k;
+    state.music.on = true;
+    $('musicC').checked = true;
+    pressed($('musicSeg'), b.dataset.k);
+    save(); emit('music-style');
+  });
+  $('volR').addEventListener('input', e => { state.music.volume = +e.target.value; $('volVal').textContent = Math.round(state.music.volume * 100) + '%'; save(); emit('music'); });
+  $('musicC').addEventListener('change', e => { state.music.on = e.target.checked; save(); emit('music-style'); });
+  $('murmurC').addEventListener('change', e => { state.music.murmur = e.target.checked; save(); emit('music'); });
 
   /* Light */
   $('brightR').addEventListener('input', e => { state.lighting.brightness = +e.target.value; lightLabels(); save(); emit('lighting'); });

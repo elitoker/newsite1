@@ -6,6 +6,7 @@ import { buildLighting, applyLighting, updateLighting, syncSpots } from './world
 import { buildOutside, applyOutsideNight } from './world/outside.js';
 import { syncFurniture, refitFurniture } from './world/furniture.js';
 import { buildGuards, updateGuards } from './actors/guards.js';
+import { startAudio, applyVolume, restartMusic } from './audio.js';
 import { applyTime, env, followCamera, setShadowBounds } from './world/sky.js';
 import { syncWorks, refitWorks, applyNight as worksAtNight, labelCache } from './art/works.js';
 import { initInput, onInput, input } from './input.js';
@@ -73,12 +74,14 @@ on('fixtures', () => buildLighting());
 on('picture-lights', () => { syncWorks(); buildLighting(); worksAtNight(env.night); });
 on('spots', () => syncSpots());
 on('backdrop', () => buildOutside());
-on('patrons', () => setPatronCount(state.patrons));
+on('patrons', () => { setPatronCount(state.patrons); applyVolume(); });
 on('frames', () => { refitWorks(); syncWorks(); refreshGhost(); renderStorage(); });
 on('works-changed', onWorksChanged);
 on('hold', w => { if (cur.placing === 'furniture') cancelFurniture(); else if (cur.placing) stopPlacing(); if (cur.held) cancelHeld(); setHeld(w); closePanel(); if (isTouch) toast('Face a wall and tap to hang it.'); });
 on('place', kind => { closePanel(); startPlacing(kind); });
 on('guards', () => buildGuards());
+on('music', applyVolume);
+on('music-style', restartMusic);
 on('furnish', type => { closePanel(); startFurniture(type); });
 on('hold-storage', i => { holdFromStorage(i); closePanel(); });
 on('loaded', () => {
@@ -106,6 +109,7 @@ onInput('key', code => {
     case 'KeyQ': doAction('cancel'); break;
     case 'KeyV': doAction('free'); break;
     case 'KeyR': doAction('rotate'); break;
+    case 'KeyM': state.music.on = !state.music.on; save(); restartMusic(); toast(state.music.on ? 'Music on.' : 'Music off.'); break;
     case 'Digit1': changeMode('first'); break;
     case 'Digit2': changeMode('third'); break;
     case 'Digit3': changeMode('drone'); break;
@@ -137,6 +141,7 @@ renderActions();
 
 document.getElementById('enterBtn').addEventListener('click', () => {
   introEl.hidden = true;
+  startAudio();
 });
 
 // Wall text is drawn on canvases, so redraw once the web fonts arrive

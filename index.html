@@ -68,11 +68,12 @@
     <div class="chips" id="chips"></div>
     <label class="check"><input type="checkbox" id="paintingsOnly" checked> Paintings only</label>
     <div id="results" class="grid"></div>
-    <p class="hint" id="searchStatus">Works come from the Cleveland Museum of Art's public domain collection and hang at their real size.</p>
+    <p class="hint" id="searchStatus">Search any artist. Works come from the Cleveland Museum of Art, the Met and Wikimedia Commons, all public domain, and hang at their real size.</p>
   </section>
 
   <section class="tab" id="tab-upload">
     <div class="field"><label for="file">Image of the work</label><input type="file" id="file" accept="image/*"></div>
+    <div class="field"><label for="upUrl">Or paste a link to an image</label><div class="row" style="margin:0;flex-wrap:nowrap"><input type="text" id="upUrl" placeholder="https://..."><button class="quiet" id="upUrlBtn">Use it</button></div></div>
     <img id="uploadPreview" alt="">
     <div class="field"><label for="upTitle">Title</label><input type="text" id="upTitle" placeholder="Untitled"></div>
     <div class="field"><label for="upArtist">Artist</label><input type="text" id="upArtist"></div>
@@ -127,6 +128,10 @@
     <div class="field"><label for="patronsR">Visitors <span class="val" id="patronsVal"></span></label><input type="range" id="patronsR" min="0" max="30" step="1"></div>
     <label class="check" style="margin:-6px 0 18px"><input type="checkbox" id="guardsC"> A guard in every room</label>
     <div class="field"><span class="lbl">Graphics</span><div class="seg" id="qualitySeg"></div></div>
+    <div class="field"><span class="lbl">Music</span><div class="seg" id="musicSeg"></div></div>
+    <div class="field"><label for="volR">Volume <span class="val" id="volVal"></span></label><input type="range" id="volR" min="0" max="1" step="0.01"></div>
+    <label class="check" style="margin:-6px 0 18px"><input type="checkbox" id="musicC"> Play music</label>
+    <label class="check" style="margin:-10px 0 18px"><input type="checkbox" id="murmurC"> Sound of visitors talking</label>
     <div class="field"><span class="lbl">In storage</span><div id="storage" class="grid"></div></div>
     <div class="row">
       <button class="quiet" id="exportBtn">Save show as a file</button>

@@ -120,3 +120,4 @@ input[type="range"] { width: 100%; accent-color: var(--ultramarine); }
 input.warmth { accent-color: #d98b3a; }
 .tabs button { white-space: nowrap; }
 .sub { font-family: var(--serif); font-weight: 400; font-size: 22px; margin: 28px 0 4px; }
+.grid .span { grid-column: 1 / -1; margin: 10px 0 -4px; }
