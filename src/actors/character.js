@@ -91,6 +91,12 @@ export function makeCharacter(seed = Math.random() * 1e9, look = {}) {
   body.add(head);
   mesh(geo('head', () => new THREE.SphereGeometry(0.112, 20, 16)), mat(skin, 0.7), head);
   mesh(geo('nose', () => new THREE.SphereGeometry(0.02, 8, 6)), mat(skin, 0.7), head, 0, -0.005, 0.108);
+  if (look.beret) {
+    // A soft beret, tipped to one side
+    const b = mesh(geo('beret', () => new THREE.CylinderGeometry(0.13, 0.12, 0.05, 20)), mat(look.beret, 0.9), head, 0.02, 0.1, -0.01);
+    b.rotation.z = -0.25;
+    b.scale.z = 1.05;
+  }
   if (hairStyle !== 'none') {
     const cap = mesh(geo('hairCap', () => new THREE.SphereGeometry(0.12, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.52)), mat(hair, 0.9), head, 0, 0.012, -0.012);
     cap.rotation.x = -0.35;

@@ -6,6 +6,7 @@ import { buildLighting, applyLighting, updateLighting, syncSpots } from './world
 import { buildOutside, applyOutsideNight } from './world/outside.js';
 import { syncFurniture, refitFurniture } from './world/furniture.js';
 import { buildGuards, updateGuards, updateGuardTalk } from './actors/guards.js';
+import { scheduleArtists, buildArtists, updateArtists, artistNear, talk, clearArtists } from './actors/artists.js';
 import { applyVolume, restartMusic } from './audio.js';
 import { applyTime, env, followCamera, setShadowBounds } from './world/sky.js';
 import { syncWorks, refitWorks, applyNight as worksAtNight, labelCache } from './art/works.js';
@@ -41,6 +42,8 @@ function rebuildWorld({ keepPlayer = true } = {}) {
   setShadowBounds(building.layout.bounds);
   applyTimeAll();
   buildGuards();
+  if (!keepPlayer) clearArtists();
+  buildArtists();
   if (keepPlayer) revalidatePatrons(); else resetPatrons();
   if (!keepPlayer || !roomAt(building.layout, rig.player.x, rig.player.z)) resetPlayer();
   if (rig.tour) startTour();
@@ -78,7 +81,8 @@ on('spots', () => syncSpots());
 on('backdrop', () => buildOutside());
 on('patrons', () => { setPatronCount(state.patrons); applyVolume(); });
 on('frames', () => { refitWorks(); syncWorks(); refreshGhost(); renderStorage(); });
-on('works-changed', onWorksChanged);
+on('works-changed', () => { onWorksChanged(); scheduleArtists(); });
+on('frames', scheduleArtists);
 on('hold', w => { if (cur.placing === 'furniture') cancelFurniture(); else if (cur.placing) stopPlacing(); if (cur.held) cancelHeld(); setHeld(w); closePanel(); if (isTouch) toast('Face a wall and tap to hang it.'); });
 on('place', kind => { closePanel(); startPlacing(kind); });
 on('guards', () => buildGuards());
@@ -92,7 +96,7 @@ on('random-show', async () => {
   toast('Picking a theme and finding the works…');
   const { hung, title } = await fillShow();
   if (!hung) { toast('The collections didn\x27t answer. Check your connection and try again.'); return; }
-  syncWorks(); onWorksChanged(); buildTitle(); updateHud(); renderStorage(); renderControls(); save();
+  syncWorks(); onWorksChanged(); scheduleArtists(); buildTitle(); updateHud(); renderStorage(); renderControls(); save();
   toast(`Hung ${hung} works for "${title}". The old show went to storage.`);
 });
 on('hold-storage', i => { holdFromStorage(i); closePanel(); });
@@ -118,7 +122,7 @@ onInput('tap', () => { if (cur.placing) doAction('place'); else if (cur.held) ha
 onInput('key', code => {
   if (introOpen()) return;
   switch (code) {
-    case 'KeyE': doAction('pickup'); break;
+    case 'KeyE': if (artistNear() && cur.aim?.type !== 'work' && !cur.held && !cur.placing) talk(); else doAction('pickup'); break;
     case 'KeyX': case 'Delete': case 'Backspace': doAction('remove'); break;
     case 'KeyQ': doAction('cancel'); break;
     case 'KeyV': doAction('free'); break;
@@ -149,6 +153,7 @@ setShadowBounds(building.layout.bounds);
 applyTimeAll();
 setPatronCount(state.patrons);
 buildGuards();
+buildArtists();
 resetPlayer();
 changeMode(state.camera || 'first');
 updateHud();
@@ -171,6 +176,7 @@ renderer.setAnimationLoop(now => {
   updatePatrons(dt, rig.player);
   updateGuards(dt);
   updateGuardTalk(rig.player, camera, rig.mode !== 'drone' && !introOpen());
+  updateArtists(dt, rig.player, rig.mode !== 'drone');
   updateAim();
   updateLighting(dt);
   updateModes(dt);

@@ -6,6 +6,7 @@ import { outerSize } from '../art/works.js';
 import { roomAt, roomPath, doorWaypoints, collide } from './nav.js';
 import { makeCharacter, disposeCharacter } from './character.js';
 import { guards } from './guards.js';
+import { artists } from './artists.js';
 
 export const patrons = [];
 const group = new THREE.Group();
@@ -138,6 +139,7 @@ export function updatePatrons(dt, player) {
     };
     for (const o of patrons) if (o !== p) avoid(o.x, o.z, 0.75);
     for (const o of guards) avoid(o.x, o.z, 0.8);
+    for (const o of artists) avoid(o.x, o.z, 0.8);
     if (player) avoid(player.x, player.z, 0.85);
 
     const k = 1 - Math.exp(-dt * 6);

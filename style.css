@@ -220,3 +220,13 @@ input.warmth { accent-color: #d98b3a; }
 @media (max-width: 760px) { #planner .panes { grid-template-columns: 1fr; grid-template-rows: 1fr 1.2fr; } }
 body.shot #hud, body.shot #modes, body.shot #menuBtn, body.shot #crosshair, body.shot #actions, body.shot #tourBtn, body.shot #joy, body.shot #riseFall, body.shot #toast, body.shot #brief, body.shot #bubble { display: none !important; }
 @media (max-aspect-ratio: 4/5) { #intro .intro-bg { background-image: url("assets/intro-tall.jpg"); } }
+
+/* Artists: a clickable hello, then a dialog card for the tour */
+.bubble.artist { border: 0; pointer-events: auto; cursor: pointer; background: #f0c987; color: #2b2217; font-style: normal; }
+.bubble.artist::after { border-top-color: #f0c987; }
+.bubble.artist:not(.show) { pointer-events: none; }
+#artistDialog { position: fixed; left: 50%; bottom: calc(var(--bottom) + 24px); transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); background: #fbf8f1; border-radius: 12px; padding: 16px 20px 12px; box-shadow: 0 10px 40px rgba(0,0,0,.35); z-index: 8; }
+#artistDialog .who { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: #9a6a2c; margin-bottom: 4px; }
+#artistText p { font-family: var(--serif); font-size: 21px; line-height: 1.35; margin: 0 0 8px; }
+#artistDialog .row { margin: 6px 0 0; }
+body:has(#artistDialog:not([hidden])) #actions { display: none; }

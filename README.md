@@ -9,6 +9,8 @@ Build a museum, hang a show, and walk through it. Walk it in first person, follo
 - **Famous museums**: galleries styled after the Louvre, the Met, MoMA, Tate Modern, the Musée d'Orsay, the Uffizi and the Detroit Institute of Arts.
 - **Live shows**: type an artist and a museum ("Vermeer at the Met") and walk into that show, built from the artist's public domain work in that museum's style.
 
+Every artist with work on the walls is in the building too, in a beret, in the room where most of their work hangs. Walk up and they say hello; ask for a tour and they walk you to each of their works. What they say comes from real sources (Wikidata, Wikipedia and the museum's own wall text) turned into their voice. Raquel Weinberg's words live in src/art/voices.js, written by hand.
+
 ## Run it on your computer
 
 The site uses JavaScript modules, so it needs a local web server (opening index.html directly won't work). Open PowerShell in this folder and run
@@ -63,11 +65,14 @@ W A S D walk, Shift faster, drag with the mouse to look. 1 2 3 switch camera. Es
       art/
         collection.js     search across Cleveland, the Met and Wikidata/Commons
         raquel.js         Raquel Weinberg's works
+        artistinfo.js     what an artist can truthfully say: Wikidata, Wikipedia, wall text
+        voices.js         Raquel's own words for her tour, written by hand
         works.js          paintings, frames, labels, picture lights
       actors/
         character.js      simple jointed people (same rig a real 3D model would use)
         patrons.js        visitor behavior
         guards.js         a guard in every room, with something to say
+        artists.js        the artists themselves, who give tours of their work
         nav.js            room-to-room pathfinding and collisions
       game/
         modes.js          the opening menu and the four modes

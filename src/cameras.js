@@ -8,6 +8,7 @@ import { collide, doorWaypoints } from './actors/nav.js';
 import { makeCharacter } from './actors/character.js';
 import { patrons } from './actors/patrons.js';
 import { guards } from './actors/guards.js';
+import { artists } from './actors/artists.js';
 
 export const rig = {
   mode: 'first',
@@ -74,7 +75,7 @@ function walk(dt, yaw) {
   p.vx += (tx - p.vx) * k;
   p.vz += (tz - p.vz) * k;
   const pt = { x: p.x + p.vx * dt, z: p.z + p.vz * dt };
-  for (const o of [...patrons, ...guards]) {
+  for (const o of [...patrons, ...guards, ...artists]) {
     const dx = pt.x - o.x, dz = pt.z - o.z, d = Math.hypot(dx, dz);
     if (d < 0.55 && d > 1e-4) { pt.x += (dx / d) * (0.55 - d); pt.z += (dz / d) * (0.55 - d); }
   }

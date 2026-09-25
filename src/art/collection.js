@@ -35,6 +35,7 @@ function cmaWork(a) {
     thumb: relay(web.url, 240),
     src: relay(big.url, 1600),
     aspect: web.width && web.height ? +web.width / +web.height : 1,
+    about: [a.did_you_know, a.description].filter(Boolean).join(' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(),
     ...(d?.height && d?.width ? okDims(d.height * 100, d.width * 100) : {}),
   };
 }
