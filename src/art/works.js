@@ -211,6 +211,5 @@ function addPictureLight(g, W, outerH, depth) {
   s.scale.x = len * 0.92;
   s.position.set(0, y - 0.024, z - 0.005);
   s.rotation.x = Math.PI / 2 + 0.5;
-  b.castShadow = a.castShadow = true;
   g.add(b, a, s);
 }

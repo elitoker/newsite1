@@ -4,7 +4,7 @@ import { state, clamp } from '../state.js';
 import { building } from '../world/building.js';
 import { outerSize } from '../art/works.js';
 import { roomAt, roomPath, doorWaypoints, collide } from './nav.js';
-import { makeCharacter } from './character.js';
+import { makeCharacter, disposeCharacter } from './character.js';
 import { guards } from './guards.js';
 
 export const patrons = [];
@@ -33,7 +33,7 @@ function spawn() {
 }
 
 export function setPatronCount(n) {
-  while (patrons.length > n) group.remove(patrons.pop().ch.root);
+  while (patrons.length > n) disposeCharacter(patrons.pop().ch);
   while (patrons.length < n) patrons.push(spawn());
 }
 export function resetPatrons() {

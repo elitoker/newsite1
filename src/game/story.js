@@ -4,7 +4,7 @@ import { state, clamp } from '../state.js';
 import { CENTERLINE } from '../config.js';
 import { building } from '../world/building.js';
 import { outerSize } from '../art/works.js';
-import { makeCharacter } from '../actors/character.js';
+import { makeCharacter, disposeCharacter } from '../actors/character.js';
 import { roomAt, roomPath, doorWaypoints, collide } from '../actors/nav.js';
 import { RAQUEL } from '../art/raquel.js';
 
@@ -214,7 +214,7 @@ function spot(w) {
 
 export function stopCritic() {
   if (!critic) return;
-  scene.remove(critic.ch.root);
+  disposeCharacter(critic.ch);
   critic = null;
   const b = document.getElementById('criticBubble');
   if (b) b.classList.remove('show');

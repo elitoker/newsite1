@@ -1,11 +1,12 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { scene, maxAniso } from '../engine.js';
 import { state } from '../state.js';
 import { WALL_T, DOOR_W, DOOR_H, MUSEUM_NAME } from '../config.js';
 import { generateLayout } from './layout.js';
 import { floorMaterial, worldUV, boxWorldUV, plasterTexture, facadeMaterial, glassMaterial } from './materials.js';
 
-export const building = { layout: null, faces: new Map(), wallMeshes: [], floorMeshes: [], colliders: [] };
+export const building = { layout: null, faces: new Map(), wallMeshes: [], wallRender: [], floorMeshes: [], colliders: [] };
 
 const group = new THREE.Group();
 scene.add(group);
@@ -59,6 +60,7 @@ export function buildBuilding() {
     right: new THREE.Vector3(f.rx, 0, f.rz),
   }]));
   building.wallMeshes = [];
+  building.wallRender = [];
   building.floorMeshes = [];
 
   const fm = floorMaterial(state.floor);
@@ -124,21 +126,34 @@ export function buildBuilding() {
 
   // Walls, including lintels over doors. Box faces: +x, -x, +y, -y, +z, -z.
   // Outside faces get stone cladding; everything is textured in world space.
+  // Every wall face is merged into one plaster mesh and one stone mesh (two draw calls);
+  // each wall also keeps an invisible box on layer 1 for aiming and hanging.
+  const plaster = [], stone = [];
   for (const s of L.segments) {
     const g = new THREE.BoxGeometry(s.x1 - s.x0, s.y1 - s.y0, s.z1 - s.z0);
     g.translate((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2, (s.z0 + s.z1) / 2);
     boxWorldUV(g, 2.5);
-    const mats = [wallMat, wallMat, wallMat, wallMat, wallMat, wallMat];
+    const outside = new Set();
     if (s.ext) {
-      const out = s.o === 'h' ? (s.ext === 'pos' ? 4 : 5) : (s.ext === 'pos' ? 0 : 1);
-      mats[out] = mats[2] = facadeMat;
-      for (const i of s.o === 'h' ? [0, 1] : [4, 5]) mats[i] = facadeMat;
+      outside.add(s.o === 'h' ? (s.ext === 'pos' ? 4 : 5) : (s.ext === 'pos' ? 0 : 1)).add(2);
+      for (const i of s.o === 'h' ? [0, 1] : [4, 5]) outside.add(i);
     }
-    const m = new THREE.Mesh(g, mats);
+    const flat = g.toNonIndexed();
+    flat.groups.forEach((grp, i) => (outside.has(i) ? stone : plaster).push(slice(flat, grp.start, grp.count)));
+    flat.dispose();
+    const proxy = new THREE.Mesh(g, wallMat);
+    proxy.layers.set(1);
+    proxy.userData.seg = s;
+    group.add(proxy);
+    building.wallMeshes.push(proxy);
+  }
+  for (const [parts, mat] of [[plaster, wallMat], [stone, facadeMat]]) {
+    if (!parts.length) continue;
+    const m = new THREE.Mesh(mergeGeometries(parts), mat);
     m.castShadow = m.receiveShadow = true;
     group.add(m);
-    m.userData.seg = s;
-    building.wallMeshes.push(m);
+    building.wallRender.push(m);
+    parts.forEach(p => p.dispose());
   }
 
   // Floating walls sit on a recessed dark plinth, which reads as a shadow gap
@@ -192,7 +207,36 @@ export function buildBuilding() {
     group.add(g);
   }
 
+  mergeStatic();
   buildTitle();
+}
+
+// Hundreds of small boxes (skylight wells, mullions, window frames, baseboards, benches)
+// become one mesh per material. Walls and floors stay separate for aiming and hit tests.
+function mergeStatic() {
+  group.updateMatrixWorld(true);
+  const keep = new Set([...building.wallMeshes, ...building.wallRender, ...building.floorMeshes]);
+  const buckets = new Map();
+  const drop = [];
+  group.traverse(o => {
+    if (!o.isMesh || keep.has(o)) return;
+    const k = o.material.uuid + (o.castShadow ? '|s' : '');
+    if (!buckets.has(k)) buckets.set(k, { mat: o.material, cast: o.castShadow, order: o.renderOrder, geos: [] });
+    buckets.get(k).geos.push(o.geometry.clone().applyMatrix4(o.matrixWorld));
+    drop.push(o);
+  });
+  for (const o of drop) { o.geometry.dispose(); o.parent.remove(o); }
+  for (const b of buckets.values()) {
+    const merged = mergeGeometries(b.geos);
+    for (const geo of merged ? [merged] : b.geos) {
+      const m = new THREE.Mesh(geo, b.mat);
+      m.castShadow = b.cast;
+      m.receiveShadow = true;
+      m.renderOrder = b.order;
+      group.add(m);
+    }
+    if (merged) b.geos.forEach(g => g.dispose());
+  }
 }
 
 export function setWallColor(hex) {
@@ -246,4 +290,14 @@ export function buildTitle() {
   titleMesh.position.set(t.x, y, t.z + 0.006);
   titleMesh.receiveShadow = true;
   group.add(titleMesh);
+}
+
+// Copy a run of vertices out of a non-indexed geometry
+function slice(geo, start, count) {
+  const out = new THREE.BufferGeometry();
+  for (const k of ['position', 'normal', 'uv']) {
+    const a = geo.attributes[k];
+    out.setAttribute(k, new THREE.BufferAttribute(a.array.slice(start * a.itemSize, (start + count) * a.itemSize), a.itemSize));
+  }
+  return out;
 }

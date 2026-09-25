@@ -3,7 +3,7 @@ import { scene } from '../engine.js';
 import { state } from '../state.js';
 import { building } from '../world/building.js';
 import { collide } from './nav.js';
-import { makeCharacter } from './character.js';
+import { makeCharacter, disposeCharacter } from './character.js';
 
 // One guard in a dark suit per room. Each keeps a post near a corner, clear of
 // the doors, scans the room, and now and then paces a few steps along the wall.
@@ -33,7 +33,7 @@ function postFor(room, L) {
 }
 
 export function buildGuards() {
-  for (const g of guards) group.remove(g.ch.root);
+  for (const g of guards) disposeCharacter(g.ch);
   guards.length = 0;
   const L = building.layout;
   if (!state.guards || !L) return;

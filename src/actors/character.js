@@ -1,10 +1,11 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Simple jointed figures for now. The rig (hips, shoulders, head) matches what a
 // rigged glTF model would need, so these can be swapped for real models later.
 
 const geoCache = {};
-const geo = (k, make) => geoCache[k] || (geoCache[k] = make());
+const geo = (k, make) => geoCache[k] || (geoCache[k] = Object.assign(make(), { userData: { key: k } }));
 const matCache = new Map();
 function mat(hex, rough = 0.8) {
   const k = hex + '|' + rough;
@@ -39,10 +40,13 @@ export function makeCharacter(seed = Math.random() * 1e9, look = {}) {
   root.add(body);
   body.scale.setScalar(height / 1.78);
 
+  // Only the big parts cast shadows; hands, noses and ties are too small to see in a shadow
+  const BIG = new Set(['leg', 'torso', 'coat', 'arm', 'head']);
   const mesh = (g, m, parent, x = 0, y = 0, z = 0) => {
     const o = new THREE.Mesh(g, m);
     o.position.set(x, y, z);
-    o.castShadow = o.receiveShadow = true;
+    o.castShadow = BIG.has(g.userData.key);
+    o.receiveShadow = true;
     parent.add(o);
     return o;
   };
@@ -93,6 +97,10 @@ export function makeCharacter(seed = Math.random() * 1e9, look = {}) {
     if (hairStyle === 'long') mesh(geo('hairLong', () => new THREE.BoxGeometry(0.22, 0.28, 0.08)), mat(hair, 0.9), head, 0, -0.13, -0.08);
   }
 
+  // Merge each joint's parts into one mesh with the colors baked in, so a person is
+  // six draw calls instead of fifteen. The joints themselves still move.
+  for (const joint of [body, hipL, hipR, shL, shR, head]) bakeJoint(joint);
+
   // Animation: characters face +z; set root.rotation.y to turn them
   let phase = r() * 10, t = r() * 10;
   const cur = { l: 0, r: 0, al: 0, ar: 0, az: 0.06, hx: 0 };
@@ -123,4 +131,38 @@ export function makeCharacter(seed = Math.random() * 1e9, look = {}) {
   }
 
   return { root, head, height, animate };
+}
+
+// One shared material for every person; each vertex carries its own color
+const skinMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75 });
+const _c = new THREE.Color();
+function bakeJoint(joint) {
+  const parts = joint.children.filter(o => o.isMesh);
+  if (parts.length < 2) return;
+  const geos = [];
+  let cast = false;
+  for (const o of parts) {
+    o.updateMatrix();
+    const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()).applyMatrix4(o.matrix);
+    for (const k of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(k)) g.deleteAttribute(k);
+    if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+    _c.copy(o.material.color);
+    const col = new Float32Array(g.attributes.position.count * 3);
+    for (let i = 0; i < col.length; i += 3) { col[i] = _c.r; col[i + 1] = _c.g; col[i + 2] = _c.b; }
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    geos.push(g);
+    cast ||= o.castShadow;
+    joint.remove(o);
+  }
+  const m = new THREE.Mesh(mergeGeometries(geos), skinMat);
+  m.castShadow = cast;
+  m.receiveShadow = true;
+  joint.add(m);
+  geos.forEach(g => g.dispose());
+}
+
+// Free a character's merged geometry when it leaves the scene
+export function disposeCharacter(ch) {
+  ch.root.parent?.remove(ch.root);
+  ch.root.traverse(o => { if (o.isMesh && o.material === skinMat) o.geometry.dispose(); });
 }

@@ -18,6 +18,7 @@ export const rig = {
 };
 let avatar = null;
 const raycaster = new THREE.Raycaster();
+raycaster.layers.enable(1);   // so the camera can see the wall hit boxes
 
 export function initRig() {
   avatar = makeCharacter(4242, { top: '#2336c8', bottom: '#1c1c1e', hair: '#1b1512', hairStyle: 'short', height: 1.8, coat: null });

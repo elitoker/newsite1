@@ -9,6 +9,7 @@ import { FURNITURE, makeFurniture, fits, syncFurniture, furnitureHitTargets } fr
 export const cur = { held: null, ghost: null, free: false, aim: null, placing: null };
 const raycaster = new THREE.Raycaster();
 raycaster.far = 60;
+raycaster.layers.enable(1);   // walls are hit-tested through invisible boxes on layer 1
 const CENTER = new THREE.Vector2(0, 0);
 
 // A held work is { ...work, origin } where origin says where to return it on cancel

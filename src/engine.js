@@ -46,8 +46,10 @@ export function resize() {
 }
 addEventListener('resize', resize);
 
+let maxPR = 1, curPR = 1;
 export function setQuality(q) {
   const pr = q === 'high' ? Math.min(devicePixelRatio, 2) : q === 'balanced' ? Math.min(devicePixelRatio, 1.5) : 1;
+  maxPR = curPR = pr;
   renderer.setPixelRatio(pr);
   const size = q === 'high' ? 4096 : q === 'balanced' ? 2048 : 1024;
   if (sun.shadow.mapSize.x !== size) {
@@ -61,7 +63,21 @@ export function setQuality(q) {
 export function setBloom(strength) { bloom.strength = strength; }
 export function setExposure(e) { renderer.toneMappingExposure = e; }
 
+// Sun shadows only need refreshing every other frame; people move slowly enough
+renderer.shadowMap.autoUpdate = false;
+let frame = 0;
+
+// Keep the frame rate smooth: if frames run slow for a while, draw fewer pixels;
+// when there's headroom again, step back up to the quality setting's resolution.
+let slowT = 0, fastT = 0;
+export function adaptResolution(dt) {
+  if (dt > 1 / 45) { slowT += dt; fastT = 0; } else if (dt < 1 / 58) { fastT += dt; slowT = 0; }
+  if (slowT > 1.5 && curPR > 0.75) { curPR = Math.max(0.75, curPR - 0.25); slowT = 0; renderer.setPixelRatio(curPR); resize(); }
+  if (fastT > 4 && curPR < maxPR) { curPR = Math.min(maxPR, curPR + 0.25); fastT = 0; renderer.setPixelRatio(curPR); resize(); }
+}
+
 export function render() {
+  if (frame++ % 2 === 0) renderer.shadowMap.needsUpdate = true;
   if (usePost) composer.render();
   else renderer.render(scene, camera);
 }

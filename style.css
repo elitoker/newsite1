@@ -123,7 +123,7 @@ input.warmth { accent-color: #d98b3a; }
 /* Opening menu: a rendered gallery at sunset behind, the menu on the left */
 #intro { position: fixed; inset: 0; z-index: 20; color: #f6f3ec; background: #1a1714; overflow: hidden; }
 #intro .intro-bg { position: absolute; inset: 0; background: url("assets/intro.jpg") center / cover no-repeat, #1a1714; }
-#intro .intro-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14,12,10,.88) 0%, rgba(14,12,10,.62) 40%, rgba(14,12,10,.05) 75%); }
+#intro .intro-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14,12,10,.9) 0%, rgba(14,12,10,.74) 42%, rgba(14,12,10,.08) 78%); }
 #intro .screen { position: absolute; inset: 0; display: none; flex-direction: column; justify-content: center; padding: calc(var(--top) + 32px) 24px calc(var(--bottom) + 32px) clamp(24px, 7vw, 96px); max-width: 720px; overflow-y: auto; }
 #intro .screen.active { display: flex; animation: rise .35s ease; }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

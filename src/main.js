@@ -1,4 +1,4 @@
-import { renderer, camera, mountRenderer, render, setQuality } from './engine.js';
+import { renderer, camera, mountRenderer, render, setQuality, adaptResolution } from './engine.js';
 import { state, save, on } from './state.js';
 import { isTouch } from './config.js';
 import { building, buildBuilding, setWallColor, buildTitle } from './world/building.js';
@@ -181,7 +181,7 @@ renderer.setAnimationLoop(now => {
     : roomAt(L, rig.player.x, rig.player.z, 0.3)?.name;
   if (where !== lastRoom) { lastRoom = where; updateHud(where || ''); }
 
-  if (!plannerOpen()) render();
+  if (!plannerOpen()) { render(); adaptResolution(dt); }
 });
 
 // Dev: /?shot renders the menu backgrounds (needs serve.ps1 -AllowSave)
