@@ -65,7 +65,9 @@ export function floorMaterial(type) {
       g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(0, r * rh, S, 1.5);
     }
   });
-  return (floorMats[type] = new THREE.MeshStandardMaterial({ map, roughness: type === 'concrete' ? 0.85 : 0.42 }));
+  const m = new THREE.MeshStandardMaterial({ map, roughness: type === 'concrete' ? 0.85 : 0.42 });
+  m.userData.envScale = 0.5;
+  return (floorMats[type] = m);
 }
 
 // Stone plaza outside the building, seen from the drone

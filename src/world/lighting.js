@@ -100,7 +100,7 @@ function buildFixtures(L) {
     const n = Math.max(1, Math.round(long / 10));
     for (let i = 0; i < n; i++) {
       const c = -long / 2 + (long / n) * (i + 0.5);
-      lampSpots.push({ x: alongZ ? r.cx : r.cx + c, y: h - 0.7, z: alongZ ? r.cz + c : r.cz, power: area / n });
+      lampSpots.push({ x: alongZ ? r.cx : r.cx + c, y: Math.max(2.6, h * 0.55), z: alongZ ? r.cz + c : r.cz, power: area / n });
     }
 
     if (style === 'track') {
@@ -203,7 +203,7 @@ export function buildLighting() {
   const pool = POOLS[state.quality] || POOLS.high;
   lamps = makePool(pool.lamps, () => new THREE.PointLight(lampColor, 0, 0, 2));
   pictureLights = makePool(state.lighting.picture ? pool.picture : 0, () => {
-    const s = new THREE.SpotLight(lampColor, 0, 0, 0.5, 0.55, 2);
+    const s = new THREE.SpotLight(lampColor, 0, 0, 0.5, 0.85, 2);
     return s;
   });
   syncSpots();
@@ -272,7 +272,7 @@ export function updateLighting(dt) {
     l.visible = true;
     l.position.set(e.s.x, e.s.y, e.s.z);
     // Intensity grows with the floor area each lamp covers
-    l.intensity = b * clamp(e.s.power * 0.5, 12, 70) * (0.75 + night * 0.35);
+    l.intensity = b * clamp(e.s.power * 0.35, 8, 45) * (0.4 + night * 0.7);
   });
 
   // Picture lights go to the works nearest the camera
@@ -296,7 +296,7 @@ export function updateLighting(dt) {
     l.target.updateMatrixWorld();
     const d = Math.hypot(out, up);
     l.angle = clamp(Math.atan((Math.max(W, H) / 2 + 0.25) / d), 0.2, 1.1);
-    l.intensity = b * 2.2 * d * d * (0.8 + night * 0.4);
+    l.intensity = b * 1.8 * d * d * (0.7 + night * 0.5);
   });
 }
 
