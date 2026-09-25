@@ -1,40 +1,48 @@
-// Search the Art Institute of Chicago's open API (no key needed).
-// Only public domain works come back with full images.
+// Search the Cleveland Museum of Art's Open Access API (no key needed).
+// Everything it returns with cc0=1 is public domain with a full image.
+//
+// Museum image servers don't send the CORS header WebGL needs to use an image
+// as a texture, so images go through wsrv.nl, a free image relay that adds it.
+// (The Art Institute of Chicago was the first source, but its image server
+// now blocks browsers and relays alike.)
+
+const API = 'https://openaccess-api.clevelandart.org/api/artworks/';
+
+export const relay = (url, width) =>
+  `https://wsrv.nl/?url=${encodeURIComponent(url)}&w=${width}&we&output=jpg`;
+
+// "Claude Monet (French, 1840–1926)" -> "Claude Monet"
+const artistName = c => (c?.description || '').replace(/\s*\(.*$/, '').trim();
 
 function catalogDims(a) {
-  const d = Array.isArray(a.dimensions_detail) ? a.dimensions_detail.find(x => x && x.width && x.height) : null;
-  let h, w;
-  if (d) { h = d.height; w = d.width; }
-  else {
-    const m = /([\d.]+)\s*[×x]\s*([\d.]+)\s*cm/.exec(a.dimensions || '');
-    if (m) { h = +m[1]; w = +m[2]; }
-  }
-  if (!h || !w || h < 2 || w < 2 || h > 1500 || w > 1500) return {};
+  const d = a.dimensions?.unframed || a.dimensions?.framed;
+  if (!d?.height || !d?.width) return {};
+  const h = d.height * 100, w = d.width * 100;
+  if (h < 2 || w < 2 || h > 1500 || w > 1500) return {};
   return { hCm: h, wCm: w };
 }
 
 export async function searchCollection(q, { paintingsOnly = true } = {}) {
-  const p = new URLSearchParams({
-    q, limit: '60',
-    fields: 'id,title,artist_title,date_display,image_id,thumbnail,dimensions,dimensions_detail,medium_display,artwork_type_title',
-  });
-  p.set('query[term][is_public_domain]', 'true');
-  const res = await fetch('https://api.artic.edu/api/v1/artworks/search?' + p);
+  const p = new URLSearchParams({ q, has_image: '1', cc0: '1', limit: '60' });
+  if (paintingsOnly) p.set('type', 'Painting');
+  const res = await fetch(API + '?' + p);
   if (!res.ok) throw new Error('Search failed: ' + res.status);
   const json = await res.json();
-  const iiif = json.config?.iiif_url || 'https://www.artic.edu/iiif/2';
   return (json.data || [])
-    .filter(a => a.image_id && (!paintingsOnly || /paint/i.test(a.artwork_type_title || '')))
-    .map(a => ({
-      source: 'Art Institute of Chicago',
-      sourceId: a.id,
-      title: a.title || 'Untitled',
-      artist: a.artist_title || 'Unknown artist',
-      date: a.date_display || '',
-      medium: a.medium_display || '',
-      thumb: `${iiif}/${a.image_id}/full/200,/0/default.jpg`,
-      src: `${iiif}/${a.image_id}/full/843,/0/default.jpg`,
-      aspect: a.thumbnail?.width && a.thumbnail?.height ? a.thumbnail.width / a.thumbnail.height : 1,
-      ...catalogDims(a),
-    }));
+    .filter(a => a.images?.web?.url)
+    .map(a => {
+      const web = a.images.web, big = a.images.print || web;
+      return {
+        source: 'Cleveland Museum of Art',
+        sourceId: a.id,
+        title: a.title || 'Untitled',
+        artist: artistName(a.creators?.[0]) || a.culture?.[0] || 'Unknown artist',
+        date: a.creation_date || '',
+        medium: a.technique || '',
+        thumb: relay(web.url, 240),
+        src: relay(big.url, 1600),
+        aspect: web.width && web.height ? +web.width / +web.height : 1,
+        ...catalogDims(a),
+      };
+    });
 }
