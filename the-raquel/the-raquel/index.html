@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Raquel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="stage"></div>
+
+<div id="hud">
+  <div class="museum" id="hudMuseum"></div>
+  <div class="show" id="hudShow"></div>
+  <div class="room" id="hudRoom"></div>
+</div>
+<div id="modes" class="seg" role="group" aria-label="Camera"></div>
+<button id="tourBtn">Fly the tour</button>
+<button id="menuBtn">Curate</button>
+<div id="crosshair"></div>
+<div id="actions"></div>
+<div id="joy"><div class="knob"></div></div>
+<div id="riseFall"><button id="rise" aria-label="Fly up">Up</button><button id="fall" aria-label="Fly down">Down</button></div>
+<div id="toast" role="status"></div>
+
+<div id="intro">
+  <div class="inner">
+    <h1 id="introTitle">The Raquel</h1>
+    <p>A museum that only hangs what you choose. Search the collection, pick a wall, and put the show together.</p>
+    <div class="keys">
+      <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> walk, <kbd>Shift</kbd> faster, mouse to look<br>
+      <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> first person, third person, drone<br>
+      In the drone, <kbd>Space</kbd> and <kbd>C</kbd> fly up and down, <kbd>T</kbd> flies the tour<br>
+      <kbd>Esc</kbd> opens the curator's drawer
+    </div>
+    <button class="primary" id="enterBtn">Enter the museum</button>
+  </div>
+</div>
+
+<aside id="panel" aria-label="Curator's drawer">
+  <div class="panel-head">
+    <h2>Curate</h2>
+    <button class="quiet" id="closePanel">Back to the galleries</button>
+  </div>
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="collection" aria-selected="true">Collection</button>
+    <button role="tab" data-tab="upload" aria-selected="false">Your work</button>
+    <button role="tab" data-tab="room" aria-selected="false">Building</button>
+    <button role="tab" data-tab="show" aria-selected="false">Show</button>
+  </div>
+
+  <section class="tab active" id="tab-collection">
+    <input type="search" id="q" placeholder="Search a title or an artist" autocomplete="off" enterkeyhint="search">
+    <div class="chips" id="chips"></div>
+    <label class="check"><input type="checkbox" id="paintingsOnly" checked> Paintings only</label>
+    <div id="results" class="grid"></div>
+    <p class="hint" id="searchStatus">Works come from the Art Institute of Chicago's public domain collection and hang at their real size.</p>
+  </section>
+
+  <section class="tab" id="tab-upload">
+    <div class="field"><label for="file">Image of the work</label><input type="file" id="file" accept="image/*"></div>
+    <img id="uploadPreview" alt="">
+    <div class="field"><label for="upTitle">Title</label><input type="text" id="upTitle" placeholder="Untitled"></div>
+    <div class="field"><label for="upArtist">Artist</label><input type="text" id="upArtist"></div>
+    <div class="field"><label for="upDate">Year</label><input type="text" id="upDate"></div>
+    <div class="field"><label for="upHeight">Height in cm</label><input type="number" id="upHeight" value="60" min="5" max="800"></div>
+    <button class="primary" id="upHang" disabled>Hang it</button>
+  </section>
+
+  <section class="tab" id="tab-room">
+    <div class="field"><span class="lbl">Plan</span><div class="seg" id="layoutSeg"></div></div>
+    <div class="field"><label for="wR">Width <span class="val" id="wVal"></span></label><input type="range" id="wR" min="10" max="60" step="1"></div>
+    <div class="field"><label for="dR">Length <span class="val" id="dVal"></span></label><input type="range" id="dR" min="12" max="80" step="1"></div>
+    <div class="field"><label for="hR">Ceiling <span class="val" id="hVal"></span></label><input type="range" id="hR" min="4" max="12" step="0.5"></div>
+    <div class="field"><span class="lbl">Walls</span><div class="swatches" id="wallSwatches"></div></div>
+    <div class="field"><span class="lbl">Floor</span><div class="seg" id="floorSeg"></div></div>
+    <div class="field"><span class="lbl">Frames</span><div class="seg" id="frameSeg"></div></div>
+    <div class="field"><label for="timeR">Light <span class="val" id="timeVal"></span></label><input type="range" id="timeR" min="0" max="1" step="0.01"></div>
+    <label class="check"><input type="checkbox" id="labelsC"> Wall labels next to each work</label>
+  </section>
+
+  <section class="tab" id="tab-show">
+    <div class="field"><label for="showTitle">Exhibition title</label><input type="text" id="showTitle"></div>
+    <p class="hint" id="showCount"></p>
+    <div class="field"><label for="patronsR">Visitors <span class="val" id="patronsVal"></span></label><input type="range" id="patronsR" min="0" max="30" step="1"></div>
+    <div class="field"><span class="lbl">Graphics</span><div class="seg" id="qualitySeg"></div></div>
+    <div class="field"><span class="lbl">In storage</span><div id="storage" class="grid"></div></div>
+    <div class="row">
+      <button class="quiet" id="exportBtn">Save show as a file</button>
+      <button class="quiet" id="importBtn">Open a show file</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+    <button class="quiet warn" id="clearBtn">Move everything to storage</button>
+  </section>
+</aside>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
