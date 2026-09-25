@@ -84,7 +84,7 @@ export function generateLayout(params, opts = {}) {
   // 3. Doors between rooms, wall segments around them, and the faces you can hang on.
   const doors = [], segments = [], faces = {}, counters = {};
   const edgeName = (o, side) => (o === 'h' ? (side > 0 ? 'N' : 'S') : (side > 0 ? 'W' : 'E'));
-  const addFace = (room, o, side, c, a, b) => {
+  const addFace = (room, o, side, c, a, b, maxY = h) => {
     const edge = edgeName(o, side);
     const key = room + edge;
     const idx = (counters[key] = (counters[key] ?? -1) + 1);
@@ -97,17 +97,62 @@ export function generateLayout(params, opts = {}) {
       cz: o === 'h' ? c + side * T / 2 : m,
       nx, nz, rx: nz, rz: -nx,   // "right" for someone facing the wall
       len: b - a,
+      maxY,                      // works must stay below this (window sills)
     };
     return id;
   };
-  const seg = (o, c, a, b, y0, y1, faceRefs, lintel = false) => {
+  // ext says which side of the wall faces outdoors: 'pos', 'neg' or null
+  // upper segments sit above the floor-level wall, so nothing collides with them
+  const seg = (o, c, a, b, y0, y1, faceRefs, lintel = false, ext = null, upper = false) => {
     const box = o === 'h'
       ? { x0: a, x1: b, z0: c - T / 2, z1: c + T / 2 }
       : { x0: c - T / 2, x1: c + T / 2, z0: a, z1: b };
-    segments.push({ id: 's' + segments.length, o, ...box, y0, y1, faces: faceRefs, lintel });
+    segments.push({ id: 's' + segments.length, o, ...box, y0, y1, faces: faceRefs, lintel, ext, upper });
   };
 
+  // Clerestory windows run above the hanging zone on every outside wall, and the
+  // south wall of the entrance room is a glass curtain wall looking outdoors.
+  const windows = [], glassWalls = [];
+  const useWindows = params.windows !== false && h >= 4.6;
+  const sill = Math.max(DH + 0.25, h - 2.1), top = h - 0.45;
+  const startRoom = roomById.hall || rooms.reduce((a, b) => (b.z1 > a.z1 ? b : a));
+
   for (const p of pieces) {
+    const ext = !p.pos ? 'pos' : !p.neg ? 'neg' : null;
+    const room = p.pos || p.neg;
+    if (ext && useWindows && p.o === 'h' && room === startRoom.id && Math.abs(p.c - startRoom.z1) < EPS && p.b - p.a > 4) {
+      // Glass curtain wall: a low curb, a head beam, and slim mullions between the panes
+      seg(p.o, p.c, p.a - T / 2, p.b + T / 2, 0, 0.12, { pos: null, neg: null }, false, ext);
+      seg(p.o, p.c, p.a - T / 2, p.b + T / 2, h - 0.4, h, { pos: null, neg: null }, false, ext, true);
+      const n = Math.max(2, Math.round((p.b - p.a) / 1.8));
+      for (let i = 1; i < n; i++) {
+        const m = p.a + ((p.b - p.a) / n) * i;
+        seg(p.o, p.c, m - 0.06, m + 0.06, 0.12, h - 0.4, { pos: null, neg: null }, false, ext, true);
+      }
+      glassWalls.push({ o: p.o, c: p.c, a: p.a, b: p.b, y0: 0.12, y1: h - 0.4, ext });
+      continue;
+    }
+    if (ext && useWindows && p.b - p.a >= 3.2) {
+      // Solid wall up to the sill, piers between windows, and a band above them
+      const len = p.b - p.a;
+      const n = Math.max(1, Math.floor((len - 0.8) / 3.2));
+      const bay = len / n, ww = Math.min(2.4, bay - 0.8);
+      const faceRefs = {
+        pos: p.pos ? addFace(p.pos, p.o, 1, p.c, p.a, p.b, sill) : null,
+        neg: p.neg ? addFace(p.neg, p.o, -1, p.c, p.a, p.b, sill) : null,
+      };
+      seg(p.o, p.c, p.a - T / 2, p.b + T / 2, 0, sill, faceRefs, false, ext);
+      seg(p.o, p.c, p.a - T / 2, p.b + T / 2, top, h, { pos: null, neg: null }, false, ext, true);
+      let edge = p.a - T / 2;
+      for (let i = 0; i < n; i++) {
+        const m = p.a + bay * (i + 0.5);
+        seg(p.o, p.c, edge, m - ww / 2, sill, top, { pos: null, neg: null }, false, ext, true);
+        windows.push({ o: p.o, c: p.c, a: m - ww / 2, b: m + ww / 2, y0: sill, y1: top, ext });
+        edge = m + ww / 2;
+      }
+      seg(p.o, p.c, edge, p.b + T / 2, sill, top, { pos: null, neg: null }, false, ext, true);
+      continue;
+    }
     let door = null;
     if (p.pos && p.neg && p.b - p.a >= DW + 1) {
       const m = (p.a + p.b) / 2;
@@ -127,7 +172,7 @@ export function generateLayout(params, opts = {}) {
         neg: p.neg && b - a >= 0.6 ? addFace(p.neg, p.o, -1, p.c, a, b) : null,
       };
       // Extend past corners so walls meet cleanly, except at door jambs
-      seg(p.o, p.c, a - (ja ? 0 : T / 2), b + (jb ? 0 : T / 2), 0, h, faceRefs);
+      seg(p.o, p.c, a - (ja ? 0 : T / 2), b + (jb ? 0 : T / 2), 0, h, faceRefs, false, ext);
     }
     if (door) seg(p.o, p.c, door.a, door.b, DH, h, { pos: null, neg: null }, true);
   }
@@ -157,7 +202,7 @@ export function generateLayout(params, opts = {}) {
   }
 
   const colliders = [
-    ...segments.filter(s => !s.lintel).map(({ x0, x1, z0, z1 }) => ({ x0, x1, z0, z1 })),
+    ...segments.filter(s => !s.lintel && !s.upper).map(({ x0, x1, z0, z1 }) => ({ x0, x1, z0, z1 })),
     ...benches.map(b => ({ x0: b.x - b.hx, x1: b.x + b.hx, z0: b.z - b.hz, z1: b.z + b.hz })),
   ];
   const bounds = {
@@ -166,10 +211,9 @@ export function generateLayout(params, opts = {}) {
   };
 
   // You walk in at the south end of the main room, facing north toward the title wall
-  const startRoom = roomById.hall || rooms.reduce((a, b) => (b.z1 > a.z1 ? b : a));
   const start = { room: startRoom.id, x: startRoom.cx, z: startRoom.z1 - Math.min(2.5, (startRoom.z1 - startRoom.z0) / 3) };
   const overDoor = doors.some(dr => dr.o === 'h' && Math.abs(dr.z - startRoom.z0) < 1e-3 && dr.x > startRoom.x0 && dr.x < startRoom.x1);
   const title = { x: startRoom.cx, z: startRoom.z0 + T / 2, width: startRoom.x1 - startRoom.x0, overDoor };
 
-  return { rooms, roomById, segments, faces, doors, benches, skylights, colliders, bounds, h, doorH: DH, wallT: T, start, title };
+  return { rooms, roomById, segments, faces, doors, benches, skylights, windows, glassWalls, sill: useWindows ? sill : h, colliders, bounds, h, doorH: DH, wallT: T, start, title };
 }

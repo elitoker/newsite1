@@ -3,7 +3,7 @@ import { scene, maxAniso } from '../engine.js';
 import { state } from '../state.js';
 import { WALL_T, DOOR_W, DOOR_H, MUSEUM_NAME } from '../config.js';
 import { generateLayout } from './layout.js';
-import { floorMaterial, groundMaterial, worldUV } from './materials.js';
+import { floorMaterial, worldUV, boxWorldUV, plasterTexture, facadeMaterial, glassMaterial } from './materials.js';
 
 export const building = { layout: null, faces: new Map(), wallMeshes: [], floorMeshes: [], colliders: [] };
 
@@ -11,6 +11,14 @@ const group = new THREE.Group();
 scene.add(group);
 
 export const wallMat = new THREE.MeshStandardMaterial({ color: state.wallColor, roughness: 0.92 });
+const facadeMat = facadeMaterial();
+const glassMat = glassMaterial();
+{
+  const t = plasterTexture();
+  wallMat.map = t;
+  wallMat.bumpMap = t;
+  wallMat.bumpScale = 0.6;
+}
 const ceilMat = new THREE.MeshStandardMaterial({ color: 0xf2f1ed, roughness: 1, shadowSide: THREE.DoubleSide });
 const wellMat = new THREE.MeshStandardMaterial({ color: 0xeeede8, roughness: 1 });
 const mullionMat = new THREE.MeshStandardMaterial({ color: 0x2c2d30, roughness: 0.4, metalness: 0.6 });
@@ -18,16 +26,7 @@ const trimMat = new THREE.MeshStandardMaterial({ color: 0x2b2a27, roughness: 0.6
 const benchWood = new THREE.MeshStandardMaterial({ color: 0x3a2a1e, roughness: 0.45 });
 const benchSteel = new THREE.MeshStandardMaterial({ color: 0x1d1d1f, roughness: 0.35, metalness: 0.8 });
 
-// The plaza the building sits on
-{
-  const g = new THREE.PlaneGeometry(800, 800);
-  g.rotateX(-Math.PI / 2);
-  worldUV(g, 8);
-  const ground = new THREE.Mesh(g, groundMaterial());
-  ground.position.y = -0.02;
-  ground.receiveShadow = true;
-  scene.add(ground);
-}
+// The ground and surroundings live in outside.js
 
 let titleMesh = null;
 
@@ -50,7 +49,7 @@ export function buildBuilding() {
   group.traverse(o => { if (o.geometry) o.geometry.dispose(); });
   group.clear();
 
-  const L = generateLayout({ layout: state.layout, ...state.room }, { wallT: WALL_T, doorW: DOOR_W, doorH: DOOR_H });
+  const L = generateLayout({ layout: state.layout, ...state.room, windows: state.windows }, { wallT: WALL_T, doorW: DOOR_W, doorH: DOOR_H });
   building.layout = L;
   building.colliders = L.colliders;
   building.faces = new Map(Object.values(L.faces).map(f => [f.id, {
@@ -116,11 +115,49 @@ export function buildBuilding() {
 
   }
 
-  // Walls, including lintels over doors
+  // Walls, including lintels over doors. Box faces: +x, -x, +y, -y, +z, -z.
+  // Outside faces get stone cladding; everything is textured in world space.
   for (const s of L.segments) {
-    const m = box(s.x1 - s.x0, s.y1 - s.y0, s.z1 - s.z0, wallMat, (s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2, (s.z0 + s.z1) / 2);
+    const g = new THREE.BoxGeometry(s.x1 - s.x0, s.y1 - s.y0, s.z1 - s.z0);
+    g.translate((s.x0 + s.x1) / 2, (s.y0 + s.y1) / 2, (s.z0 + s.z1) / 2);
+    boxWorldUV(g, 2.5);
+    const mats = [wallMat, wallMat, wallMat, wallMat, wallMat, wallMat];
+    if (s.ext) {
+      const out = s.o === 'h' ? (s.ext === 'pos' ? 4 : 5) : (s.ext === 'pos' ? 0 : 1);
+      mats[out] = mats[2] = facadeMat;
+      for (const i of s.o === 'h' ? [0, 1] : [4, 5]) mats[i] = facadeMat;
+    }
+    const m = new THREE.Mesh(g, mats);
+    m.castShadow = m.receiveShadow = true;
+    group.add(m);
     m.userData.seg = s;
     building.wallMeshes.push(m);
+  }
+
+  // Glass in the clerestory windows and the entrance wall, with slim frames
+  const pane = (o, c, a, b, y0, y1) => {
+    const len = b - a, hh = y1 - y0, mid = (a + b) / 2;
+    const g = new THREE.PlaneGeometry(len, hh);
+    const m = new THREE.Mesh(g, glassMat);
+    m.position.set(o === 'h' ? mid : c, (y0 + y1) / 2, o === 'h' ? c : mid);
+    if (o === 'v') m.rotation.y = Math.PI / 2;
+    m.renderOrder = 2;
+    group.add(m);
+  };
+  const bar = (o, c, a, b, y0, y1, t = 0.05) => {
+    const lx = o === 'h' ? b - a : t, lz = o === 'h' ? t : b - a;
+    box(lx, y1 - y0, lz, mullionMat, o === 'h' ? (a + b) / 2 : c, (y0 + y1) / 2, o === 'h' ? c : (a + b) / 2).castShadow = true;
+  };
+  for (const w of L.windows) {
+    pane(w.o, w.c, w.a, w.b, w.y0, w.y1);
+    const mid = (w.a + w.b) / 2;
+    bar(w.o, w.c, mid - 0.025, mid + 0.025, w.y0, w.y1);
+    bar(w.o, w.c, w.a, w.b, (w.y0 + w.y1) / 2 - 0.025, (w.y0 + w.y1) / 2 + 0.025);
+    bar(w.o, w.c, w.a, w.b, w.y0 - 0.03, w.y0 + 0.02, WALL_T + 0.1);   // sill
+  }
+  for (const w of L.glassWalls) {
+    pane(w.o, w.c, w.a, w.b, w.y0, w.y1);
+    bar(w.o, w.c, w.a, w.b, 2.6, 2.66, 0.12);                          // transom
   }
 
   // Baseboards on every hangable face
@@ -168,7 +205,10 @@ export function buildTitle() {
     width = height * 4;
     y = L.doorH + 0.12 + avail / 2;
   } else {
-    y = Math.min(L.h - height / 2 - 0.3, 3.3);
+    const maxTop = Math.min(L.h - 0.3, L.sill - 0.15);
+    height = Math.min(height, Math.max(0.3, (maxTop - 2) * 0.9));
+    width = Math.min(width, height * 4);
+    y = Math.min(maxTop - height / 2, 3.3);
   }
   if (height < 0.3) return;
 

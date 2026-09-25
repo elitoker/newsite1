@@ -3,6 +3,7 @@ import { MUSEUM_NAME, WALL_COLORS, FLOORS, FRAME_STYLES, LAYOUTS, QUALITY, CAMER
 import { searchCollection } from '../art/collection.js';
 import { workSize } from '../art/works.js';
 import { FIXTURES, MAX_SPOTS } from '../world/lighting.js';
+import { BACKDROPS } from '../world/outside.js';
 
 const $ = id => document.getElementById(id);
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -51,6 +52,8 @@ export function renderControls() {
   $('timeR').value = state.time;
   for (const k of ['w', 'd', 'h']) { $(k + 'R').value = state.room[k]; $(k + 'Val').textContent = state.room[k] + ' m'; }
   $('labelsC').checked = state.labels;
+  seg($('backdropSeg'), BACKDROPS, state.backdrop);
+  $('windowsC').checked = state.windows;
   const lt = state.lighting;
   $('brightR').value = lt.brightness;
   $('warmR').value = lt.warmth;
@@ -198,6 +201,8 @@ export function initUI() {
   segHandler('floorSeg', 'floor', 'rebuild');
   segHandler('frameSeg', 'frame', 'frames');
   segHandler('qualitySeg', 'quality', 'quality');
+  segHandler('backdropSeg', 'backdrop', 'backdrop');
+  $('windowsC').addEventListener('change', e => { state.windows = e.target.checked; save(); emit('rebuild'); });
   $('timeR').addEventListener('input', e => { state.time = +e.target.value; save(); emit('time'); });
   let rebuildTimer;
   for (const k of ['w', 'd', 'h']) {

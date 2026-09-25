@@ -172,7 +172,8 @@ export function refitWorks() {
   for (const w of state.works) {
     const f = building.faces.get(w.faceId);
     const { W, H } = outerSize(w);
-    if (!f || W > f.len - 0.2 || H > building.layout.h - 0.3) {
+    const top = f ? (f.maxY ?? building.layout.h) : 0;
+    if (!f || W > f.len - 0.2 || H > top - 0.3) {
       const { faceId, u, v, ...rest } = w;
       state.storage.push(rest);
       labelCache.delete(w.id);
@@ -181,7 +182,7 @@ export function refitWorks() {
     }
     const maxU = Math.max(0, f.len / 2 - W / 2 - 0.1);
     w.u = clamp(w.u, -maxU, maxU);
-    w.v = clamp(w.v, H / 2 + 0.1, Math.max(H / 2 + 0.1, building.layout.h - H / 2 - 0.15));
+    w.v = clamp(w.v, H / 2 + 0.1, Math.max(H / 2 + 0.1, top - H / 2 - 0.15));
     keep.push(w);
   }
   state.works = keep;

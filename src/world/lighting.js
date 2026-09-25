@@ -224,7 +224,7 @@ export function applyLighting(n = night) {
   amb.intensity = b * (0.16 - night * 0.1);
   hemi.groundColor.copy(bounceColor);
   bulbMat.emissive.copy(lampColor);
-  bulbMat.emissiveIntensity = 1.5 + night * 5;
+  bulbMat.emissiveIntensity = 0.6 + night * 5;
 
   for (const l of [...lamps, ...pictureLights]) l.color.copy(lampColor);
   for (const s of userSpots) {

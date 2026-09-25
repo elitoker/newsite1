@@ -45,7 +45,7 @@ export const TIME_KEYS = [
   { t: 1,   name: 'Night',       top: '#03071a', horizon: '#10183a', ground: '#08090e', sun: '#8090c0', sunI: 0,   elev: -30, hemiSky: '#2c3558', hemiI: 0.12, night: 1 },
 ];
 
-export const SUGGESTIONS = ['Monet', 'Seurat', 'Van Gogh', 'Cassatt', 'Hokusai', 'Caillebotte', 'El Greco', 'Rembrandt'];
+export const SUGGESTIONS = ['Raquel Rudy', 'Monet', 'Seurat', 'Van Gogh', 'Cassatt', 'Hokusai', 'Caillebotte', 'El Greco', 'Rembrandt'];
 
 export const DEFAULTS = {
   layout: 'hall',

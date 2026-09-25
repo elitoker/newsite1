@@ -6,6 +6,8 @@
 // (The Art Institute of Chicago was the first source, but its image server
 // now blocks browsers and relays alike.)
 
+import { RAQUEL, isRaquelQuery } from './raquel.js';
+
 const API = 'https://openaccess-api.clevelandart.org/api/artworks/';
 
 export const relay = (url, width) =>
@@ -23,6 +25,7 @@ function catalogDims(a) {
 }
 
 export async function searchCollection(q, { paintingsOnly = true } = {}) {
+  if (isRaquelQuery(q)) return RAQUEL.map(w => ({ ...w }));
   const p = new URLSearchParams({ q, has_image: '1', cc0: '1', limit: '60' });
   if (paintingsOnly) p.set('type', 'Painting');
   const res = await fetch(API + '?' + p);

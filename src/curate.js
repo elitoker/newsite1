@@ -63,7 +63,7 @@ export function updateAim() {
       const { W, H } = outerSize(cur.held);
       const maxU = Math.max(0, f.len / 2 - W / 2 - 0.1);
       const u = clamp(hit.point.clone().sub(f.center).dot(f.right), -maxU, maxU);
-      const h = building.layout.h;
+      const h = f.maxY ?? building.layout.h;
       let v = cur.free ? hit.point.y : Math.max(CENTERLINE, H / 2 + 0.35);
       v = clamp(v, H / 2 + 0.1, Math.max(H / 2 + 0.1, h - H / 2 - 0.15));
       const fits = W <= f.len - 0.2 && H <= h - 0.25;

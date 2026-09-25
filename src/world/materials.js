@@ -119,3 +119,112 @@ export const glowMat = new THREE.MeshBasicMaterial({
   map: glowTex, color: 0xffd6a0, transparent: true, opacity: 0,
   blending: THREE.AdditiveBlending, depthWrite: false,
 });
+
+// Box UVs from world position, so textures keep the same scale on every wall
+export function boxWorldUV(geo, scale) {
+  const p = geo.attributes.position, n = geo.attributes.normal, uv = geo.attributes.uv;
+  for (let i = 0; i < p.count; i++) {
+    const nx = Math.abs(n.getX(i)), nz = Math.abs(n.getZ(i));
+    const u = nx > 0.5 ? p.getZ(i) : p.getX(i);
+    const v = nx > 0.5 || nz > 0.5 ? p.getY(i) : p.getZ(i);
+    uv.setXY(i, u / scale, v / scale);
+  }
+  uv.needsUpdate = true;
+}
+
+// Subtle trowelled plaster: a near-white map that tints the wall color, also used as a bump map
+export function plasterTexture() {
+  return canvasTexture(512, (g, S) => {
+    g.fillStyle = '#f6f6f6'; g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 140; i++) {
+      const x = Math.random() * S, y = Math.random() * S, r = 20 + Math.random() * 90;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      const shade = Math.random() < 0.5 ? '0,0,0' : '255,255,255';
+      gr.addColorStop(0, `rgba(${shade},0.035)`); gr.addColorStop(1, `rgba(${shade},0)`);
+      g.fillStyle = gr;
+      for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) g.fillRect(x - r + dx, y - r + dy, r * 2, r * 2);
+    }
+    speckle(g, S, 12000, 0.05);
+  });
+}
+
+// Limestone cladding: staggered blocks, one texture repeat = 2.5 m
+export function facadeMaterial() {
+  const map = canvasTexture(512, (g, S) => {
+    g.fillStyle = '#d9d3c7'; g.fillRect(0, 0, S, S);
+    const rows = 4, rh = S / rows;
+    for (let r = 0; r < rows; r++) {
+      const off = r % 2 ? S / 4 : 0;
+      for (let c = -1; c < 2; c++) {
+        const x = c * S / 2 + off, k = 0.94 + Math.random() * 0.1;
+        g.fillStyle = `rgba(${217 * k | 0},${211 * k | 0},${199 * k | 0},1)`;
+        g.fillRect(x + 2, r * rh + 2, S / 2 - 4, rh - 4);
+      }
+    }
+    speckle(g, S, 16000, 0.08);
+    g.fillStyle = 'rgba(0,0,0,0.22)';
+    for (let r = 0; r <= rows; r++) g.fillRect(0, r * rh - 1, S, 2);
+  });
+  return new THREE.MeshStandardMaterial({ map, roughness: 0.85 });
+}
+
+export function glassMaterial() {
+  const m = new THREE.MeshStandardMaterial({
+    color: 0xcfe0e6, transparent: true, opacity: 0.14, roughness: 0.04, metalness: 0.2,
+    side: THREE.DoubleSide, depthWrite: false,
+  });
+  m.userData.envScale = 3;
+  return m;
+}
+
+// Ground outside: grass for the park, asphalt for the city, stone for the plaza
+export function lawnMaterial() {
+  const map = canvasTexture(512, (g, S) => {
+    g.fillStyle = '#5d7a3a'; g.fillRect(0, 0, S, S);
+    for (let i = 0; i < 26000; i++) {
+      const k = Math.random();
+      g.fillStyle = k < 0.5 ? `rgba(40,70,20,${Math.random() * 0.35})` : `rgba(150,180,90,${Math.random() * 0.25})`;
+      g.fillRect(Math.random() * S, Math.random() * S, 1.5, 3);
+    }
+  });
+  return new THREE.MeshStandardMaterial({ map, roughness: 1 });
+}
+export function asphaltMaterial() {
+  const map = canvasTexture(512, (g, S) => {
+    g.fillStyle = '#3c3d40'; g.fillRect(0, 0, S, S);
+    speckle(g, S, 30000, 0.3);
+    for (let i = 0; i < 6000; i++) { g.fillStyle = `rgba(255,255,255,${Math.random() * 0.08})`; g.fillRect(Math.random() * S, Math.random() * S, 1.5, 1.5); }
+  });
+  return new THREE.MeshStandardMaterial({ map, roughness: 0.92 });
+}
+export function pathMaterial() {
+  const map = canvasTexture(256, (g, S) => {
+    g.fillStyle = '#b9ab92'; g.fillRect(0, 0, S, S);
+    speckle(g, S, 9000, 0.25);
+  });
+  return new THREE.MeshStandardMaterial({ map, roughness: 1 });
+}
+
+// City towers: a window grid for daytime, and a second map of lit windows for night
+export function towerTextures() {
+  const cols = 8, rows = 16, S = 512, cw = S / cols, rh = S / rows;
+  const lit = [];
+  for (let i = 0; i < cols * rows; i++) lit.push(Math.random() < 0.35);
+  const map = canvasTexture(S, g => {
+    g.fillStyle = '#8b8f94'; g.fillRect(0, 0, S, S);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const k = 0.7 + Math.random() * 0.3;
+      g.fillStyle = `rgb(${70 * k | 0},${90 * k | 0},${110 * k | 0})`;
+      g.fillRect(c * cw + 6, r * rh + 5, cw - 12, rh - 10);
+    }
+  });
+  const emissiveMap = canvasTexture(S, g => {
+    g.fillStyle = '#000'; g.fillRect(0, 0, S, S);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      if (!lit[r * cols + c]) continue;
+      g.fillStyle = Math.random() < 0.8 ? '#ffd8a0' : '#cfe3ff';
+      g.fillRect(c * cw + 6, r * rh + 5, cw - 12, rh - 10);
+    }
+  });
+  return { map, emissiveMap };
+}
